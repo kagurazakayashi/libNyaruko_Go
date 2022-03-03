@@ -10,28 +10,41 @@ import (
 
 type NyaSQLite NyaSQLiteT
 type NyaSQLiteT struct {
-	db *sql.DB
+	db  *sql.DB
+	err error
 }
 
-func Init(confCMap cmap.ConcurrentMap) (NyaSQLite, error) {
-	sqlLiteVersion, ish := confCMap.Get("sqlite_ver")
-	if !ish {
-		fmt.Println("缺少key:sqlite_ver")
-	}
-	sqlLiteFile, ish := confCMap.Get("sqlite_file")
-	if !ish {
-		fmt.Println("缺少key:sqlite_file")
-	}
-	sqlLiteDB, err := sql.Open(sqlLiteVersion.(string), sqlLiteFile.(string))
+func Init(confCMap cmap.ConcurrentMap) NyaSQLite {
+	sqlLiteVersion, err := loadConfig(confCMap, "sqlite_ver")
 	if err != nil {
-		return NyaSQLite{}, err
+		return NyaSQLite{err: err}
 	}
-	return NyaSQLite{db: sqlLiteDB}, nil
+	sqlLiteFile, err := loadConfig(confCMap, "sqlite_file")
+	if err != nil {
+		return NyaSQLite{err: err}
+	}
+	sqlLiteDB, err := sql.Open(sqlLiteVersion, sqlLiteFile)
+	if err != nil {
+		return NyaSQLite{err: err}
+	}
+	return NyaSQLite{db: sqlLiteDB}
 }
 
 func (p NyaSQLite) Close() {
 	p.db.Close()
 	p.db = nil
+}
+
+func (p NyaSQLite) Error() error {
+	return p.err
+}
+
+func loadConfig(confCMap cmap.ConcurrentMap, key string) (string, error) {
+	val, isExist := confCMap.Get(key)
+	if !isExist {
+		return "", fmt.Errorf("no config : " + key)
+	}
+	return val.(string), nil
 }
 
 //向SQL数据库中添加
