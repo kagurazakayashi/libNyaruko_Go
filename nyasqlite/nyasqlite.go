@@ -35,8 +35,34 @@ func (p NyaSQLite) Close() {
 	p.db = nil
 }
 
+//Error: 獲取上一次操作時可能產生的錯誤
+//	return error 如果有錯誤，返回錯誤物件，如果沒有錯誤返回 nil
 func (p NyaSQLite) Error() error {
 	return p.err
+}
+
+//ErrorString: 獲取上一次操作時可能產生的錯誤資訊字串
+//	return string 如果有錯誤，返回錯誤描述字串，如果沒有錯誤返回空字串
+func (p NyaSQLite) ErrorString() string {
+	if p.err == nil {
+		return ""
+	}
+	return p.err.Error()
+}
+
+func (p NyaSQLite) SqlINSERT(sqlCmd string) int64 {
+	var result sql.Result = nil
+	fmt.Println(sqlCmd)
+	result, p.err = p.db.Exec(sqlCmd)
+	if p.err != nil {
+		return -1
+	}
+	var id int64 = -1
+	id, p.err = result.LastInsertId()
+	if p.err != nil {
+		return -1
+	}
+	return id
 }
 
 func loadConfig(confCMap cmap.ConcurrentMap, key string) (string, error) {
