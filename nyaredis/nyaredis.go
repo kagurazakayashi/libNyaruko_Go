@@ -18,14 +18,14 @@ type Option struct {
 }
 type OptionConfig func(*Option)
 
-func Option_isDelete(val bool) OptionConfig {
+func Option_isDelete(v bool) OptionConfig {
 	return func(p *Option) {
-		p.isDelete = val
+		p.isDelete = v
 	}
 }
-func Option_autoDelete(val int) OptionConfig {
+func Option_autoDelete(v int) OptionConfig {
 	return func(p *Option) {
-		p.autoDelete = val
+		p.autoDelete = v
 	}
 }
 
@@ -42,7 +42,7 @@ type NyaRedisT struct {
 
 // </类>
 
-//New 建立新的 NyaRedis 例項
+//New: 建立新的 NyaRedis 例項
 //	`confCMap` cmap.ConcurrentMap 載入的配置檔案字典
 //  return     NyaRedis           新的 NyaRedis 例項
 //	下一步使用 `Error()` 或 `ErrorString()` 檢查是否有錯誤
@@ -79,19 +79,19 @@ func New(confCMap cmap.ConcurrentMap) NyaRedis {
 	return NyaRedis{db: nRedisDB, err: nil}
 }
 
-//Close 關閉資料庫連線
+//Close: 關閉資料庫連線
 func (p NyaRedis) Close() {
 	p.db.Close()
 	p.db = nil
 }
 
-//Error 獲取上一次操作時可能產生的錯誤
+//Error: 獲取上一次操作時可能產生的錯誤
 //	return error 如果有錯誤，返回錯誤物件，如果沒有錯誤返回 nil
 func (p NyaRedis) Error() error {
 	return p.err
 }
 
-//ErrorString 獲取上一次操作時可能產生的錯誤資訊字串
+//ErrorString: 獲取上一次操作時可能產生的錯誤資訊字串
 //	return string 如果有錯誤，返回錯誤描述字串，如果沒有錯誤返回空字串
 func (p NyaRedis) ErrorString() string {
 	if p.err == nil {
@@ -100,7 +100,7 @@ func (p NyaRedis) ErrorString() string {
 	return p.err.Error()
 }
 
-//SetString 向資料庫中新增字串資料
+//SetString: 向資料庫中新增字串資料
 //	`key`  string 資料名稱
 //	`val`  string 資料內容
 //  `options` ...OptionConfig 可選配置，執行 `Option_*` 函式輸入
@@ -119,7 +119,7 @@ func (p NyaRedis) SetString(key string, val string, options ...OptionConfig) boo
 	return p.err == nil
 }
 
-//GetString 從資料庫中取出字串值
+//GetString: 從資料庫中取出字串值
 //	`key`  string 資料名稱
 //	`options` ...OptionConfig 可選配置，執行 `Option_*` 函式輸入
 //		`isDelete` bool 是否在查詢完成後刪除此條目，預設值 `false`
@@ -143,7 +143,7 @@ func (p NyaRedis) GetString(key string, options ...OptionConfig) string {
 	return val
 }
 
-//GetStringAll 從資料庫中批次取出字串值
+//GetStringAll: 從資料庫中批次取出字串值
 //	`keyPattern` string 資料名稱(包含萬用字元 `*`, 例如 `prefix*` )
 //	`options` ...OptionConfig 可選配置，執行 `Option_*` 函式輸入
 //		`isDelete`    bool 是否在查詢完成後刪除此條目，預設值 `false`
@@ -173,7 +173,7 @@ func (p NyaRedis) GetStringAll(keyPattern string, options ...OptionConfig) map[s
 	return data
 }
 
-//Keys 按照萬用字元字串獲取鍵名稱列表
+//Keys: 按照萬用字元字串獲取鍵名稱列表
 //	`keyPattern` string 資料名稱(包含萬用字元 `*`, 例如 `prefix*` )
 //  return 取出的鍵名字串陣列。如果不成功則返回空陣列，可使用 `Error()` 或 `ErrorString()` 檢查是否發生錯誤或獲取錯誤資訊
 func (p NyaRedis) Keys(keyPattern string) []string {
@@ -185,7 +185,7 @@ func (p NyaRedis) Keys(keyPattern string) []string {
 	return keys
 }
 
-//Delete 刪除資料
+//Delete: 刪除資料
 //	`keys` []string 要刪除的資料名稱陣列（可刪除多條）
 //	`options` ...OptionConfig 可選配置，執行 `Option_*` 函式輸入
 //		`isErrorStop` bool 在批次操作中是否遇到錯誤就停止，否則忽略錯誤，會記錄最近一次錯誤，預設值 `false`
@@ -204,7 +204,7 @@ func (p NyaRedis) Delete(keys []string, options ...OptionConfig) bool {
 	return p.err != nil
 }
 
-//DeleteMulti 根據萬用字元資料名稱刪除資料
+//DeleteMulti: 根據萬用字元資料名稱刪除資料
 //	`keyPattern` string 資料名稱(包含萬用字元 `*`, 例如 `prefix*` )
 //	`options` ...OptionConfig 可選配置，執行 `Option_*` 函式輸入
 //		`isErrorStop` bool 在批次操作中是否遇到錯誤就停止，否則忽略錯誤，會記錄最近一次錯誤，預設值 `false`
@@ -227,7 +227,7 @@ func (p NyaRedis) DeleteMulti(keyPattern string, options ...OptionConfig) bool {
 	return true
 }
 
-//loadConfig 從載入的配置檔案中載入配置
+//loadConfig: 從載入的配置檔案中載入配置
 //	`confCMap` cmap.ConcurrentMap 載入的配置檔案字典
 //	`key`      string             配置名稱
 //	return     string             配置內容
