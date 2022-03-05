@@ -1,8 +1,10 @@
 package nyamqtt
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
+	"encoding/binary"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -12,7 +14,7 @@ import (
 	cmap "github.com/orcaman/concurrent-map"
 )
 
-// <类>
+// <類>
 var ctx = context.Background()
 
 type NyaMQTT NyaMQTTT
@@ -26,17 +28,47 @@ type NyaMQTTT struct {
 	hReconnecting   mqtt.ReconnectHandler
 	hConnectAttempt mqtt.ConnectionAttemptHandler
 	hMessage        mqtt.MessageHandler
+	defaultQOS      byte
+	defaultRetained bool
+	qos             byte
+	retained        bool
 }
 
-// </类>
+// </類>
 
-type NyaMQTTStatusHandler func(int8, error)
+// <可選配置>
+type Option struct {
+	qos         byte
+	retained    bool // 表示mqtt伺服器要保留這次推送的資訊，如果有新的訂閱者出現，就會把這訊息推送給它（持久化推送）
+	isErrorStop bool // 在批次操作中是否遇到錯誤就停止
+}
+type OptionConfig func(*Option)
+
+func Option_qos(v byte) OptionConfig {
+	return func(p *Option) {
+		p.qos = v
+	}
+}
+func Option_retained(v bool) OptionConfig {
+	return func(p *Option) {
+		p.retained = v
+	}
+}
+func Option_isErrorStop(v bool) OptionConfig {
+	return func(p *Option) {
+		p.isErrorStop = v
+	}
+}
+
+// </可選配置>
+
+type NyaMQTTStatusHandler func(status int8, err error)
 
 func (p NyaMQTT) SetNyaMQTTStatusHandler(handler NyaMQTTStatusHandler) {
 	p.statusHandler = handler
 }
 
-type NyaMQTTSMessageHandler func(uint16, string, string)
+type NyaMQTTSMessageHandler func(messageID uint16, topic string, message string)
 
 func (p NyaMQTT) SetNyaMQTTSMessageHandler(handler NyaMQTTSMessageHandler) {
 	p.messageHandler = handler
@@ -66,6 +98,20 @@ func New(confCMap cmap.ConcurrentMap, statusHandler NyaMQTTStatusHandler, messag
 	redisPassword, err := loadConfig(confCMap, "mqtt_pwd")
 	if err == nil && len(redisPassword) > 0 {
 		opts.SetPassword(redisPassword)
+	}
+	var bQOS byte = 0
+	qos, err := loadConfig(confCMap, "mqtt_qos")
+	if err == nil && len(qos) > 0 {
+		// bQOS = []byte(qos)[0]
+		qosi, err := strconv.Atoi(qos)
+		if err == nil && qosi >= 0 && qosi <= 2 {
+			bQOS = IntToBytes(qosi)[0]
+		}
+	}
+	var bRetained bool = false
+	retained, err := loadConfig(confCMap, "mqtt_retained")
+	if err == nil && len(retained) > 0 {
+		bRetained = retained != "0"
 	}
 
 	var nyamqttobj NyaMQTT = NyaMQTT{statusHandler: statusHandler, messageHandler: messageHandler}
@@ -99,7 +145,7 @@ func New(confCMap cmap.ConcurrentMap, statusHandler NyaMQTTStatusHandler, messag
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
 		return NyaMQTT{err: token.Error()}
 	}
-	return NyaMQTT{db: client, err: nil}
+	return NyaMQTT{db: client, err: nil, defaultQOS: bQOS, defaultRetained: bRetained}
 }
 
 func loadConfig(confCMap cmap.ConcurrentMap, key string) (string, error) {
@@ -108,6 +154,13 @@ func loadConfig(confCMap cmap.ConcurrentMap, key string) (string, error) {
 		return "", fmt.Errorf("no config : " + key)
 	}
 	return val.(string), nil
+}
+
+func IntToBytes(n int) []byte {
+	x := int32(n)
+	bytesBuffer := bytes.NewBuffer([]byte{})
+	binary.Write(bytesBuffer, binary.BigEndian, x)
+	return bytesBuffer.Bytes()
 }
 
 //Error: 獲取上一次操作時可能產生的錯誤
@@ -125,12 +178,39 @@ func (p NyaMQTT) ErrorString() string {
 	return p.err.Error()
 }
 
-// var messagePubHandler mqtt.MessageHandler =
+func (p NyaMQTT) Subscribe(topic string, options ...OptionConfig) bool {
+	option := &Option{qos: p.defaultQOS}
+	for _, o := range options {
+		o(option)
+	}
+	fmt.Println("Subscribe", topic, option.qos)
+	token := p.db.Subscribe(topic, option.qos, nil)
+	token.Wait()
+	p.err = token.Error()
+	return p.err == nil
+}
 
-// var connectHandler mqtt.OnConnectHandler =
+func (p NyaMQTT) Unsubscribe(topic string) bool {
+	var token mqtt.Token = p.db.Unsubscribe(topic)
+	token.Wait()
+	p.err = token.Error()
+	return p.err == nil
+}
 
-// var connectLostHandler mqtt.ConnectionLostHandler =
 
-// var reconnectHandler mqtt.ReconnectHandler =
+func (p NyaMQTT) Publish(topic string, text string, options ...OptionConfig) bool {
+	option := &Option{qos: p.defaultQOS, retained: p.defaultRetained}
+	for _, o := range options {
+		o(option)
+	}
+	fmt.Println("Publish", topic, option.qos, option.retained, text)
+	var token mqtt.Token = p.db.Publish(topic, option.qos, option.retained, text)
+	token.Wait()
+	p.err = token.Error()
+	return p.err == nil
+}
 
-// var connectAttemptHandler mqtt.ConnectionAttemptHandler =
+
+func (p NyaMQTT) Close(waitTime uint) {
+	p.db.Disconnect(waitTime)
+}

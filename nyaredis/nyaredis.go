@@ -10,7 +10,7 @@ import (
 	cmap "github.com/orcaman/concurrent-map"
 )
 
-// <类>
+// <類>
 var ctx = context.Background()
 
 type NyaRedis NyaRedisT
@@ -19,9 +19,9 @@ type NyaRedisT struct {
 	err error
 }
 
-// </类>
+// </類>
 
-// <可选配置>
+// <可選配置>
 type Option struct {
 	isDelete    bool // 在查詢完成後刪除此條目
 	autoDelete  int  // 資料條目的超時時間（秒）
@@ -39,8 +39,13 @@ func Option_autoDelete(v int) OptionConfig {
 		p.autoDelete = v
 	}
 }
+func Option_isErrorStop(v bool) OptionConfig {
+	return func(p *Option) {
+		p.isErrorStop = v
+	}
+}
 
-// </可选配置>
+// </可選配置>
 
 //New: 建立新的 NyaRedis 例項
 //	`confCMap` cmap.ConcurrentMap 載入的配置檔案字典
