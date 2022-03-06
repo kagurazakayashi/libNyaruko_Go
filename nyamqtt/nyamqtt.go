@@ -190,6 +190,23 @@ func (p NyaMQTT) Subscribe(topic string, options ...OptionConfig) bool {
 	return p.err == nil
 }
 
+func (p NyaMQTT) SubscribeMulti(topics []string, options ...OptionConfig) bool {
+	option := &Option{qos: p.defaultQOS, isErrorStop: false}
+	for _, o := range options {
+		o(option)
+	}
+	var isOK = true
+	for _, v := range topics {
+		if !p.Subscribe(v, options...) {
+			isOK = false
+			if option.isErrorStop {
+				return false
+			}
+		}
+	}
+	return isOK
+}
+
 func (p NyaMQTT) Unsubscribe(topic string) bool {
 	var token mqtt.Token = p.db.Unsubscribe(topic)
 	token.Wait()
@@ -197,6 +214,12 @@ func (p NyaMQTT) Unsubscribe(topic string) bool {
 	return p.err == nil
 }
 
+func (p NyaMQTT) UnsubscribeMulti(topics []string) bool {
+	var token mqtt.Token = p.db.Unsubscribe(topics...)
+	token.Wait()
+	p.err = token.Error()
+	return p.err == nil
+}
 
 func (p NyaMQTT) Publish(topic string, text string, options ...OptionConfig) bool {
 	option := &Option{qos: p.defaultQOS, retained: p.defaultRetained}
@@ -210,6 +233,22 @@ func (p NyaMQTT) Publish(topic string, text string, options ...OptionConfig) boo
 	return p.err == nil
 }
 
+func (p NyaMQTT) PublishMulti(topicAndTexts map[string]string, options ...OptionConfig) bool {
+	option := &Option{qos: p.defaultQOS, retained: p.defaultRetained, isErrorStop: false}
+	for _, o := range options {
+		o(option)
+	}
+	var isOK = true
+	for key, value := range topicAndTexts {
+		if !p.Publish(key, value, options...) {
+			isOK = false
+			if option.isErrorStop {
+				return false
+			}
+		}
+	}
+	return isOK
+}
 
 func (p NyaMQTT) Close(waitTime uint) {
 	p.db.Disconnect(waitTime)
