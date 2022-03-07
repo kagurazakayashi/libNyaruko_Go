@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-func readFile(filename string) (string, error) {
+func ReadFile(filename string) (string, error) {
 	bytes, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return "", fmt.Errorf("[读取文件失败]:" + err.Error())

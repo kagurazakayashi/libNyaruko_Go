@@ -36,7 +36,7 @@ import (
 // 	db.Close()
 // 	return redata, err
 // }
-func (p NyaMySQL) queryData(recn string, table string, where string, orderby string, limit string, Debug *log.Logger) (cmap.ConcurrentMap, error) {
+func (p NyaMySQL) QueryData(recn string, table string, where string, orderby string, limit string, Debug *log.Logger) (cmap.ConcurrentMap, error) {
 	var dbq string = "select " + recn + " from `" + table + "`"
 	if where != "" {
 		dbq += " where " + where
@@ -113,7 +113,7 @@ func (p NyaMySQL) queryData(recn string, table string, where string, orderby str
 // 	db.Close()
 // 	return redata, err
 // }
-func (p NyaMySQL) addRecord(table string, key string, val string, values string, Debug *log.Logger) (int64, error) {
+func (p NyaMySQL) AddRecord(table string, key string, val string, values string, Debug *log.Logger) (int64, error) {
 	var dbq string = "insert into `" + table + "` (" + key + ")" + "VALUES "
 	if values != "" {
 		dbq += values
@@ -160,7 +160,7 @@ func (p NyaMySQL) addRecord(table string, key string, val string, values string,
 // 	db.Close()
 // 	return err
 // }
-func (p NyaMySQL) updataRecord(table string, updata string, where string, Debug *log.Logger) error {
+func (p NyaMySQL) UpdataRecord(table string, updata string, where string, Debug *log.Logger) error {
 	var dbq string = "update `" + table + "` set " + updata
 	if where != "" {
 		dbq += " where " + where
@@ -208,7 +208,7 @@ func (p NyaMySQL) updataRecord(table string, updata string, where string, Debug 
 // 	db.Close()
 // 	return err
 // }
-func (p NyaMySQL) deleteRecord(table string, key string, value string, and string, wherein string, Debug *log.Logger) error {
+func (p NyaMySQL) DeleteRecord(table string, key string, value string, and string, wherein string, Debug *log.Logger) error {
 	if value == "" && wherein == "" {
 		return fmt.Errorf("删除语句条件不能为空")
 	}
@@ -261,7 +261,7 @@ func (p NyaMySQL) deleteRecord(table string, key string, value string, and strin
 // 	db.Close()
 // 	return redata, err
 // }
-func (p NyaMySQL) freequeryData(sqlstr string, Debug *log.Logger) (cmap.ConcurrentMap, error) {
+func (p NyaMySQL) FreequeryData(sqlstr string, Debug *log.Logger) (cmap.ConcurrentMap, error) {
 	if Debug != nil {
 		Debug.Println("\n" + sqlstr)
 	}
