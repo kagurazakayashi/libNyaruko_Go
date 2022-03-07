@@ -13,44 +13,44 @@ type NyaMySQLT struct {
 	err error
 }
 
-func Init(confCMap cmap.ConcurrentMap) NyaMySQL {
+func Init(confCMap cmap.ConcurrentMap) *NyaMySQL {
 	sqlname, err := loadConfig(confCMap, "mysql_user")
 	if err != nil {
-		return NyaMySQL{err: err}
+		return &NyaMySQL{err: err}
 	}
 	sqlpassword, err := loadConfig(confCMap, "mysql_pwd")
 	if err != nil {
-		return NyaMySQL{err: err}
+		return &NyaMySQL{err: err}
 	}
 	sqlpath, err := loadConfig(confCMap, "mysql_addr")
 	if err != nil {
-		return NyaMySQL{err: err}
+		return &NyaMySQL{err: err}
 	}
 	sqlport, err := loadConfig(confCMap, "mysql_port")
 	if err != nil {
-		return NyaMySQL{err: err}
+		return &NyaMySQL{err: err}
 	}
 	sqllibrary, err := loadConfig(confCMap, "mysql_db")
 	if err != nil {
-		return NyaMySQL{err: err}
+		return &NyaMySQL{err: err}
 	}
 	sqlsetting := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", sqlname, sqlpassword, sqlpath, sqlport, sqllibrary)
 	sqldb, err := sql.Open("mysql", sqlsetting)
 	if err != nil {
-		return NyaMySQL{err: err}
+		return &NyaMySQL{err: err}
 	}
 	if err := sqldb.Ping(); err != nil {
-		return NyaMySQL{err: err}
+		return &NyaMySQL{err: err}
 	}
-	return NyaMySQL{db: sqldb}
+	return &NyaMySQL{db: sqldb}
 }
 
-func (p NyaMySQL) Close() {
+func (p *NyaMySQL) Close() {
 	p.db.Close()
 	p.db = nil
 }
 
-func (p NyaMySQL) Error() error {
+func (p *NyaMySQL) Error() error {
 	return p.err
 }
 

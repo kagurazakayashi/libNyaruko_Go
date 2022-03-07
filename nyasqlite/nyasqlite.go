@@ -14,43 +14,43 @@ type NyaSQLiteT struct {
 	err error
 }
 
-func Init(confCMap cmap.ConcurrentMap) NyaSQLite {
+func Init(confCMap cmap.ConcurrentMap) *NyaSQLite {
 	sqlLiteVersion, err := loadConfig(confCMap, "sqlite_ver")
 	if err != nil {
-		return NyaSQLite{err: err}
+		return &NyaSQLite{err: err}
 	}
 	sqlLiteFile, err := loadConfig(confCMap, "sqlite_file")
 	if err != nil {
-		return NyaSQLite{err: err}
+		return &NyaSQLite{err: err}
 	}
 	sqlLiteDB, err := sql.Open(sqlLiteVersion, sqlLiteFile)
 	if err != nil {
-		return NyaSQLite{err: err}
+		return &NyaSQLite{err: err}
 	}
-	return NyaSQLite{db: sqlLiteDB}
+	return &NyaSQLite{db: sqlLiteDB}
 }
 
-func (p NyaSQLite) Close() {
+func (p *NyaSQLite) Close() {
 	p.db.Close()
 	p.db = nil
 }
 
 //Error: 獲取上一次操作時可能產生的錯誤
 //	return error 如果有錯誤，返回錯誤物件，如果沒有錯誤返回 nil
-func (p NyaSQLite) Error() error {
+func (p *NyaSQLite) Error() error {
 	return p.err
 }
 
 //ErrorString: 獲取上一次操作時可能產生的錯誤資訊字串
 //	return string 如果有錯誤，返回錯誤描述字串，如果沒有錯誤返回空字串
-func (p NyaSQLite) ErrorString() string {
+func (p *NyaSQLite) ErrorString() string {
 	if p.err == nil {
 		return ""
 	}
 	return p.err.Error()
 }
 
-func (p NyaSQLite) SqlINSERT(sqlCmd string) int64 {
+func (p *NyaSQLite) SqlINSERT(sqlCmd string) int64 {
 	var result sql.Result = nil
 	fmt.Println(sqlCmd)
 	result, p.err = p.db.Exec(sqlCmd)
@@ -80,7 +80,7 @@ func loadConfig(confCMap cmap.ConcurrentMap, key string) (string, error) {
 //	`val`		string		与key对应的值，以,分割
 //	`values`	string		(此项不为"",val无效)添加多行数据与key对应的值，以,分割,例(1,2),(2,3)
 //	return		int64 和 error 对象，返回添加行的id
-func (p NyaSQLite) sqliteAddRecord(table string, key string, val string, values string) (int64, error) {
+func (p *NyaSQLite) sqliteAddRecord(table string, key string, val string, values string) (int64, error) {
 	var dbq string = "insert into `" + table + "` (" + key + ")" + "VALUES "
 	if values != "" {
 		dbq += values

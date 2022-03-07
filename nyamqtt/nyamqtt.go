@@ -64,24 +64,24 @@ func Option_isErrorStop(v bool) OptionConfig {
 
 type NyaMQTTStatusHandler func(status int8, err error)
 
-func (p NyaMQTT) SetNyaMQTTStatusHandler(handler NyaMQTTStatusHandler) {
+func (p *NyaMQTT) SetNyaMQTTStatusHandler(handler NyaMQTTStatusHandler) {
 	p.statusHandler = handler
 }
 
-type NyaMQTTSMessageHandler func(messageID uint16, topic string, message string)
+type NyaMQTTSMessageHandler func(topic string, message string)
 
-func (p NyaMQTT) SetNyaMQTTSMessageHandler(handler NyaMQTTSMessageHandler) {
+func (p *NyaMQTT) SetNyaMQTTSMessageHandler(handler NyaMQTTSMessageHandler) {
 	p.messageHandler = handler
 }
 
-func New(confCMap cmap.ConcurrentMap, statusHandler NyaMQTTStatusHandler, messageHandler NyaMQTTSMessageHandler) NyaMQTT {
+func New(confCMap cmap.ConcurrentMap, statusHandler NyaMQTTStatusHandler, messageHandler NyaMQTTSMessageHandler) *NyaMQTT {
 	redisBroker, err := loadConfig(confCMap, "mqtt_addr")
 	if err != nil {
-		return NyaMQTT{err: err}
+		return &NyaMQTT{err: err}
 	}
 	redisPort, err := loadConfig(confCMap, "mqtt_port")
 	if err != nil {
-		return NyaMQTT{err: err}
+		return &NyaMQTT{err: err}
 	}
 	var opts *mqtt.ClientOptions = mqtt.NewClientOptions()
 	var uri string = "tcp://" + redisBroker + ":" + redisPort
@@ -117,7 +117,7 @@ func New(confCMap cmap.ConcurrentMap, statusHandler NyaMQTTStatusHandler, messag
 	var nyamqttobj NyaMQTT = NyaMQTT{statusHandler: statusHandler, messageHandler: messageHandler}
 	nyamqttobj.hMessage = func(client mqtt.Client, msg mqtt.Message) {
 		var message string = string(msg.Payload())
-		nyamqttobj.messageHandler(msg.MessageID(), msg.Topic(), message)
+		nyamqttobj.messageHandler(msg.Topic(), message)
 	}
 	opts.SetDefaultPublishHandler(nyamqttobj.hMessage)
 	nyamqttobj.hConnect = func(client mqtt.Client) {
@@ -143,9 +143,9 @@ func New(confCMap cmap.ConcurrentMap, statusHandler NyaMQTTStatusHandler, messag
 
 	var client mqtt.Client = mqtt.NewClient(opts)
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
-		return NyaMQTT{err: token.Error()}
+		return &NyaMQTT{err: token.Error()}
 	}
-	return NyaMQTT{db: client, err: nil, defaultQOS: bQOS, defaultRetained: bRetained}
+	return &NyaMQTT{db: client, err: nil, defaultQOS: bQOS, defaultRetained: bRetained}
 }
 
 func loadConfig(confCMap cmap.ConcurrentMap, key string) (string, error) {
@@ -165,32 +165,32 @@ func IntToBytes(n int) []byte {
 
 //Error: 獲取上一次操作時可能產生的錯誤
 //	return error 如果有錯誤，返回錯誤物件，如果沒有錯誤返回 nil
-func (p NyaMQTT) Error() error {
+func (p *NyaMQTT) Error() error {
 	return p.err
 }
 
 //ErrorString: 獲取上一次操作時可能產生的錯誤資訊字串
 //	return string 如果有錯誤，返回錯誤描述字串，如果沒有錯誤返回空字串
-func (p NyaMQTT) ErrorString() string {
+func (p *NyaMQTT) ErrorString() string {
 	if p.err == nil {
 		return ""
 	}
 	return p.err.Error()
 }
 
-func (p NyaMQTT) Subscribe(topic string, options ...OptionConfig) bool {
+func (p *NyaMQTT) Subscribe(topic string, options ...OptionConfig) bool {
 	option := &Option{qos: p.defaultQOS}
 	for _, o := range options {
 		o(option)
 	}
-	fmt.Println("Subscribe", topic, option.qos)
+	// fmt.Println("Subscribe", topic, option.qos)
 	token := p.db.Subscribe(topic, option.qos, nil)
 	token.Wait()
 	p.err = token.Error()
 	return p.err == nil
 }
 
-func (p NyaMQTT) SubscribeMulti(topics []string, options ...OptionConfig) bool {
+func (p *NyaMQTT) SubscribeMulti(topics []string, options ...OptionConfig) bool {
 	option := &Option{qos: p.defaultQOS, isErrorStop: false}
 	for _, o := range options {
 		o(option)
@@ -207,33 +207,33 @@ func (p NyaMQTT) SubscribeMulti(topics []string, options ...OptionConfig) bool {
 	return isOK
 }
 
-func (p NyaMQTT) Unsubscribe(topic string) bool {
+func (p *NyaMQTT) Unsubscribe(topic string) bool {
 	var token mqtt.Token = p.db.Unsubscribe(topic)
 	token.Wait()
 	p.err = token.Error()
 	return p.err == nil
 }
 
-func (p NyaMQTT) UnsubscribeMulti(topics []string) bool {
+func (p *NyaMQTT) UnsubscribeMulti(topics []string) bool {
 	var token mqtt.Token = p.db.Unsubscribe(topics...)
 	token.Wait()
 	p.err = token.Error()
 	return p.err == nil
 }
 
-func (p NyaMQTT) Publish(topic string, text string, options ...OptionConfig) bool {
+func (p *NyaMQTT) Publish(topic string, text string, options ...OptionConfig) bool {
 	option := &Option{qos: p.defaultQOS, retained: p.defaultRetained}
 	for _, o := range options {
 		o(option)
 	}
-	fmt.Println("Publish", topic, option.qos, option.retained, text)
+	// fmt.Println("Publish", topic, option.qos, option.retained, text)
 	var token mqtt.Token = p.db.Publish(topic, option.qos, option.retained, text)
 	token.Wait()
 	p.err = token.Error()
 	return p.err == nil
 }
 
-func (p NyaMQTT) PublishMulti(topicAndTexts map[string]string, options ...OptionConfig) bool {
+func (p *NyaMQTT) PublishMulti(topicAndTexts map[string]string, options ...OptionConfig) bool {
 	option := &Option{qos: p.defaultQOS, retained: p.defaultRetained, isErrorStop: false}
 	for _, o := range options {
 		o(option)
@@ -250,6 +250,6 @@ func (p NyaMQTT) PublishMulti(topicAndTexts map[string]string, options ...Option
 	return isOK
 }
 
-func (p NyaMQTT) Close(waitTime uint) {
+func (p *NyaMQTT) Close(waitTime uint) {
 	p.db.Disconnect(waitTime)
 }
