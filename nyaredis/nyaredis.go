@@ -3,11 +3,10 @@ package nyaredis
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	redis "github.com/go-redis/redis/v8"
-	cmap "github.com/orcaman/concurrent-map"
+	"github.com/tidwall/gjson"
 )
 
 // <類>
@@ -48,36 +47,45 @@ func Option_isErrorStop(v bool) OptionConfig {
 // </可選配置>
 
 //New: 建立新的 NyaRedis 例項
-//	`confCMap` cmap.ConcurrentMap 載入的配置檔案字典
-//  return     NyaRedis           新的 NyaRedis 例項
+//	`configJsonString` string 配置 JSON 字串
+//	從配置 JSON 檔案中取出的本模組所需的配置段落 JSON 字串
+//  示例配置數值參考 config.template.json
+//	本模組所需配置項: redis_addr, redis_port, redis_pwd, redis_db
+//  return NyaRedis 新的 NyaRedis 例項
 //	下一步使用 `Error()` 或 `ErrorString()` 檢查是否有錯誤
-func New(confCMap cmap.ConcurrentMap) *NyaRedis {
-	redisaddress, err := loadConfig(confCMap, "redis_addr")
-	if err != nil {
-		return &NyaRedis{err: err}
+func New(configJsonString string) *NyaRedis {
+	var configNG string = "NO CONFIG KEY : "
+	var configKey string = "redis_addr"
+	var redisAddress gjson.Result = gjson.Get(configJsonString, configKey)
+	if !redisAddress.Exists() {
+		return &NyaRedis{err: fmt.Errorf(configNG + configKey)}
 	}
-	redisport, err := loadConfig(confCMap, "redis_port")
-	if err != nil {
-		return &NyaRedis{err: err}
+	var addr = redisAddress.String()
+	configKey = "redis_port"
+	var redisPort gjson.Result = gjson.Get(configJsonString, configKey)
+	if !redisPort.Exists() {
+		return &NyaRedis{err: fmt.Errorf(configNG + configKey)}
 	}
-	redispassword, err := loadConfig(confCMap, "redis_pwd")
-	if err != nil {
-		return &NyaRedis{err: err}
+	var port = redisPort.String()
+	configKey = "redis_pwd"
+	var redisPassword gjson.Result = gjson.Get(configJsonString, configKey)
+	if !redisPassword.Exists() {
+		return &NyaRedis{err: fmt.Errorf(configNG + configKey)}
 	}
-	redisdbidstr, err := loadConfig(confCMap, "redis_db")
-	if err != nil {
-		return &NyaRedis{err: err}
+	var pwd = redisPassword.String()
+	configKey = "redis_db"
+	var redisDBID gjson.Result = gjson.Get(configJsonString, configKey)
+	if !redisDBID.Exists() {
+		return &NyaRedis{err: fmt.Errorf(configNG + configKey)}
 	}
-	redisdbid, err := strconv.Atoi(redisdbidstr)
-	if err != nil {
-		return &NyaRedis{err: err}
-	}
-	nRedisDB := redis.NewClient(&redis.Options{
-		Addr:     redisaddress + ":" + redisport,
-		Password: redispassword,
-		DB:       redisdbid,
+	var dbid = int(redisDBID.Int())
+
+	var nRedisDB *redis.Client = redis.NewClient(&redis.Options{
+		Addr:     addr + ":" + port,
+		Password: pwd,
+		DB:       dbid,
 	})
-	_, err = nRedisDB.Ping(nRedisDB.Context()).Result()
+	_, err := nRedisDB.Ping(nRedisDB.Context()).Result()
 	if err != nil {
 		return &NyaRedis{err: err}
 	}
@@ -230,17 +238,4 @@ func (p *NyaRedis) DeleteMulti(keyPattern string, options ...OptionConfig) bool 
 		return false
 	}
 	return true
-}
-
-//loadConfig: 從載入的配置檔案中載入配置
-//	`confCMap` cmap.ConcurrentMap 載入的配置檔案字典
-//	`key`      string             配置名稱
-//	return     string             配置內容
-//	return     error              可能遇到的錯誤
-func loadConfig(confCMap cmap.ConcurrentMap, key string) (string, error) {
-	val, isExist := confCMap.Get(key)
-	if !isExist {
-		return "", fmt.Errorf("no config : " + key)
-	}
-	return val.(string), nil
 }

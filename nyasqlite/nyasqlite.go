@@ -10,31 +10,55 @@ import (
 
 type NyaSQLite NyaSQLiteT
 type NyaSQLiteT struct {
-	db     *sql.DB
-	err    error
-	dbver  string
-	dbfile string
+	db  *sql.DB
+	err error
 }
 
-func Init(confCMap cmap.ConcurrentMap) *NyaSQLite {
-	sqlLiteVersion, err := loadConfig(confCMap, "sqlite_ver")
-	if err != nil {
-		return &NyaSQLite{err: err}
+//New: 建立新的 NyaSQLite 例項
+//	`configJsonString` string 配置 JSON 字串
+//	從配置 JSON 檔案中取出的本模組所需的配置段落 JSON 字串
+//  示例配置數值參考 config.template.json
+//	本模組所需配置項: sqlite_ver, sqlite_file
+//  return *NyaSQLite 新的 NyaSQLite 例項
+//	下一步使用 `Error()` 或 `ErrorString()` 檢查是否有錯誤
+func New(configJsonString string) *NyaSQLite {
+	var configNG string = "NO CONFIG KEY : "
+	var configKey string = "sqlite_ver"
+	sqlLiteVersion := gjson.Get(configJsonString, configKey)
+	if !sqlLiteVersion.Exists() {
+		return &NyaSQLite{err: fmt.Errorf(configNG + configKey)}
 	}
-	sqlLiteFile, err := loadConfig(confCMap, "sqlite_file")
-	if err != nil {
-		return &NyaSQLite{err: err}
+	var dbver string = sqlLiteVersion.String()
+	configKey = "sqlite_file"
+	sqlLiteFile := gjson.Get(configJsonString, configKey)
+	if !sqlLiteFile.Exists() {
+		return &NyaSQLite{err: fmt.Errorf(configNG + configKey)}
 	}
-	sqlLiteDB, err := sql.Open(sqlLiteVersion, sqlLiteFile)
+	var dbfile string = sqlLiteFile.String()
+
+	sqlLiteDB, err := sql.Open(dbver, dbfile)
 	if err != nil {
 		return &NyaSQLite{err: err}
 	}
 	return &NyaSQLite{db: sqlLiteDB}
 }
 
-func (p *NyaSQLite) Close() {
-	p.db.Close()
-	p.db = nil
+//SqlExec: 執行 SQL 語句
+//	請先對要執行的語句進行安全檢查。建議使用 nyasql 生成 SQL 語句
+//	`sqlCmd` string 要執行的 SQL 語句
+//	return   int64  資料被新增到了哪行，如果是插入操作返回 -1 表示失敗
+func (p *NyaSQLite) SqlExec(sqlCmd string) int64 {
+	var result sql.Result = nil
+	result, p.err = p.db.Exec(sqlCmd)
+	if p.err != nil {
+		return -1
+	}
+	var id int64 = -1
+	id, p.err = result.LastInsertId()
+	if p.err != nil {
+		return -1
+	}
+	return id
 }
 
 //Error: 獲取上一次操作時可能產生的錯誤
@@ -50,34 +74,6 @@ func (p *NyaSQLite) ErrorString() string {
 		return ""
 	}
 	return p.err.Error()
-}
-
-func (p *NyaSQLite) SqlINSERT(sqlCmd string) int64 {
-//SqlExec: 執行 SQL 語句
-//	請先對要執行的語句進行安全檢查。建議使用 nyasql 生成 SQL 語句
-//	`sqlCmd` string 要執行的 SQL 語句
-//	return   int64  資料被新增到了哪行，如果是插入操作返回 -1 表示失敗
-func (p *NyaSQLite) SqlExec(sqlCmd string) int64 {
-	var result sql.Result = nil
-	fmt.Println(sqlCmd)
-	result, p.err = p.db.Exec(sqlCmd)
-	if p.err != nil {
-		return -1
-	}
-	var id int64 = -1
-	id, p.err = result.LastInsertId()
-	if p.err != nil {
-		return -1
-	}
-	return id
-}
-
-func loadConfig(confCMap cmap.ConcurrentMap, key string) (string, error) {
-	val, isExist := confCMap.Get(key)
-	if !isExist {
-		return "", fmt.Errorf("no config : " + key)
-	}
-	return val.(string), nil
 }
 
 //向SQL数据库中添加
@@ -108,4 +104,3 @@ func (p *NyaSQLite) Close() {
 	p.db.Close()
 	p.db = nil
 }
-

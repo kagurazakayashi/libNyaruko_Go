@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"database/sql"
 	"encoding/binary"
 	"fmt"
 	"net/url"
@@ -13,6 +12,7 @@ import (
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	cmap "github.com/orcaman/concurrent-map"
+	"github.com/tidwall/gjson"
 )
 
 // <類>
@@ -31,8 +31,6 @@ type NyaMQTTT struct {
 	hMessage        mqtt.MessageHandler
 	defaultQOS      byte
 	defaultRetained bool
-	qos             byte
-	retained        bool
 }
 
 // </類>
@@ -100,43 +98,61 @@ func (p *NyaMQTT) SetNyaMQTTSMessageHandler(handler NyaMQTTSMessageHandler) {
 //  return *NyaMQTT 新的 NyaMQTT 例項
 //	下一步使用 `Error()` 或 `ErrorString()` 檢查是否有錯誤
 func New(configJsonString string, statusHandler NyaMQTTStatusHandler, messageHandler NyaMQTTSMessageHandler) *NyaMQTT {
-	redisBroker, err := loadConfig(confCMap, "mqtt_addr")
-	if err != nil {
-		return &NyaMQTT{err: err}
+	var configNG string = "NO CONFIG KEY : "
+	var configKey string = "mqtt_addr"
+	var redisBroker gjson.Result = gjson.Get(configJsonString, configKey)
+	if !redisBroker.Exists() {
+		return &NyaMQTT{err: fmt.Errorf(configNG + configKey)}
 	}
-	redisPort, err := loadConfig(confCMap, "mqtt_port")
-	if err != nil {
-		return &NyaMQTT{err: err}
+	var broker string = redisBroker.String()
+	configKey = "mqtt_port"
+	var redisPort gjson.Result = gjson.Get(configJsonString, configKey)
+	if !redisPort.Exists() {
+		return &NyaMQTT{err: fmt.Errorf(configNG + configKey)}
 	}
+	var port string = redisPort.String()
+	configKey = "mqtt_client"
+	var redisClientID gjson.Result = gjson.Get(configJsonString, configKey)
+	var clientid string = ""
+	if redisClientID.Exists() {
+		clientid = redisClientID.String()
+	} else {
+		clientid = "client" + strconv.FormatInt(time.Now().UnixNano(), 10)
+	}
+	configKey = "mqtt_user"
+	var redisUsername gjson.Result = gjson.Get(configJsonString, configKey)
+	var user string = ""
+	if redisUsername.Exists() {
+		user = redisUsername.String()
+	}
+	configKey = "mqtt_pwd"
+	var redisPassword gjson.Result = gjson.Get(configJsonString, configKey)
+	var password string = ""
+	if redisPassword.Exists() {
+		password = redisPassword.String()
+	}
+	configKey = "mqtt_qos"
+	var redisQOS gjson.Result = gjson.Get(configJsonString, configKey)
+	var qos byte = 0
+	if redisQOS.Exists() {
+		qos = IntToBytes(int(redisQOS.Int()))[0]
+	}
+	configKey = "mqtt_retained"
+	var redisRetained gjson.Result = gjson.Get(configJsonString, configKey)
+	var retained bool = false
+	if redisQOS.Exists() {
+		retained = redisRetained.Int() != 0
+	}
+
 	var opts *mqtt.ClientOptions = mqtt.NewClientOptions()
-	var uri string = "tcp://" + redisBroker + ":" + redisPort
+	var uri string = "tcp://" + broker + ":" + port
 	opts.AddBroker(uri)
-	redisClientID, err := loadConfig(confCMap, "mqtt_client")
-	if err != nil || len(redisClientID) == 0 {
-		redisClientID = "client" + strconv.FormatInt(time.Now().UnixNano(), 10)
+	opts.SetClientID(clientid)
+	if len(user) > 0 {
+		opts.SetUsername(user)
 	}
-	opts.SetClientID(redisClientID)
-	redisUsername, err := loadConfig(confCMap, "mqtt_user")
-	if err == nil && len(redisUsername) > 0 {
-		opts.SetUsername(redisUsername)
-	}
-	redisPassword, err := loadConfig(confCMap, "mqtt_pwd")
-	if err == nil && len(redisPassword) > 0 {
-		opts.SetPassword(redisPassword)
-	}
-	var bQOS byte = 0
-	qos, err := loadConfig(confCMap, "mqtt_qos")
-	if err == nil && len(qos) > 0 {
-		// bQOS = []byte(qos)[0]
-		qosi, err := strconv.Atoi(qos)
-		if err == nil && qosi >= 0 && qosi <= 2 {
-			bQOS = IntToBytes(qosi)[0]
-		}
-	}
-	var bRetained bool = false
-	retained, err := loadConfig(confCMap, "mqtt_retained")
-	if err == nil && len(retained) > 0 {
-		bRetained = retained != "0"
+	if len(password) > 0 {
+		opts.SetPassword(password)
 	}
 
 	var nyamqttobj NyaMQTT = NyaMQTT{statusHandler: statusHandler, messageHandler: messageHandler}
@@ -180,7 +196,7 @@ func New(configJsonString string, statusHandler NyaMQTTStatusHandler, messageHan
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
 		return &NyaMQTT{err: token.Error()}
 	}
-	return &NyaMQTT{db: client, err: nil, defaultQOS: bQOS, defaultRetained: bRetained}
+	return &NyaMQTT{db: client, err: nil, defaultQOS: qos, defaultRetained: retained}
 }
 
 //loadConfig: 從載入的配置檔案中載入配置
@@ -328,17 +344,4 @@ func (p *NyaMQTT) PublishMulti(topicAndTexts map[string]string, options ...Optio
 //	`waitTime` uint 斷開等待時間(毫秒)，為了安全斷開建議設定
 func (p *NyaMQTT) Close(waitTime uint) {
 	p.db.Disconnect(waitTime)
-}
-
-//Open: 根據之前讀入的設定重新開啟連線，在 Close() 之後執行。
-func (p *NyaMQTT) Open() error {
-	if p.db == nil {
-		sqlLiteDB, err := sql.Open(p.dbver, p.dbfile)
-		p.err = err
-		if err != nil {
-			return err
-		}
-		p.db = sqlLiteDB
-	}
-	return nil
 }
