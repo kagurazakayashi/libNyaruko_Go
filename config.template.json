@@ -1,0 +1,20 @@
+{
+    "mysql_addr": "127.0.0.1",
+    "mysql_port": "3306",
+    "mysql_db": "testdb",
+    "mysql_user": "mysqlusername",
+    "mysql_pwd": "mysqlpassword",
+    "sqlite_ver": "sqlite3",
+    "sqlite_file": "./data.db",
+    "redis_addr": "127.0.0.1",
+    "redis_port": "6379",
+    "redis_pwd": "redispassword",
+    "redis_db": "9",
+    "mqtt_addr": "127.0.0.1",
+    "mqtt_port": "1883",
+    "mqtt_client": "democlient",
+    "mqtt_user": "mqttusername",
+    "mqtt_pwd": "mqttpassword",
+    "mqtt_qos": "0",
+    "mqtt_retained": "0"
+}

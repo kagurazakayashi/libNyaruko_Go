@@ -16,6 +16,8 @@ type NyaFileInfo struct {
 	isDir   bool      // 是否為資料夾
 }
 
+// <代理方法>
+
 //NyaReadFileLineHandler: FileReadLine 的代理方法
 //	`lineText` string 當前行的文字內容
 //	`lineNum`  uint   當前行號
@@ -26,6 +28,8 @@ type NyaReadFileLineHandler func(lineText string, lineNum uint, isEnd bool, err 
 func SetNyaReadFileLineHandler(handler NyaReadFileLineHandler) {
 	readFileLineHandler = handler
 }
+
+// </代理方法>
 
 var (
 	readFileLineHandler NyaReadFileLineHandler

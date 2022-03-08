@@ -5,13 +5,15 @@ import (
 	"fmt"
 
 	_ "github.com/mattn/go-sqlite3"
-	cmap "github.com/orcaman/concurrent-map"
+	"github.com/tidwall/gjson"
 )
 
 type NyaSQLite NyaSQLiteT
 type NyaSQLiteT struct {
-	db  *sql.DB
-	err error
+	db     *sql.DB
+	err    error
+	dbver  string
+	dbfile string
 }
 
 func Init(confCMap cmap.ConcurrentMap) *NyaSQLite {
@@ -51,6 +53,11 @@ func (p *NyaSQLite) ErrorString() string {
 }
 
 func (p *NyaSQLite) SqlINSERT(sqlCmd string) int64 {
+//SqlExec: 執行 SQL 語句
+//	請先對要執行的語句進行安全檢查。建議使用 nyasql 生成 SQL 語句
+//	`sqlCmd` string 要執行的 SQL 語句
+//	return   int64  資料被新增到了哪行，如果是插入操作返回 -1 表示失敗
+func (p *NyaSQLite) SqlExec(sqlCmd string) int64 {
 	var result sql.Result = nil
 	fmt.Println(sqlCmd)
 	result, p.err = p.db.Exec(sqlCmd)
@@ -80,7 +87,7 @@ func loadConfig(confCMap cmap.ConcurrentMap, key string) (string, error) {
 //	`val`		string		与key对应的值，以,分割
 //	`values`	string		(此项不为"",val无效)添加多行数据与key对应的值，以,分割,例(1,2),(2,3)
 //	return		int64 和 error 对象，返回添加行的id
-func (p *NyaSQLite) sqliteAddRecord(table string, key string, val string, values string) (int64, error) {
+func (p *NyaSQLite) SqliteAddRecord(table string, key string, val string, values string) (int64, error) {
 	var dbq string = "insert into `" + table + "` (" + key + ")" + "VALUES "
 	if values != "" {
 		dbq += values
@@ -95,3 +102,10 @@ func (p *NyaSQLite) sqliteAddRecord(table string, key string, val string, values
 	id, _ := result.LastInsertId()
 	return id, nil
 }
+
+//Close: 斷開與資料庫的連線
+func (p *NyaSQLite) Close() {
+	p.db.Close()
+	p.db = nil
+}
+
