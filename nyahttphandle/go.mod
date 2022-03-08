@@ -1,4 +1,4 @@
-module nyahttphandle
+module github.com/kagurazakayashi/libNyaruko_Go/nyahttphandle
 
 go 1.17
 
