@@ -42,7 +42,7 @@ func Init(confstr string, handlers ...func(http.ResponseWriter, *http.Request)) 
 			fmt.Println(patterns.Array()[i], " is not string")
 			continue
 		}
-		pattern := suburl.String() + patterns.Array()[i].Type.String()
+		pattern := suburl.String() + patterns.Array()[i].String()
 		http.HandleFunc(pattern, v)
 	}
 	//设置监听的端口
