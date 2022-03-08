@@ -117,27 +117,37 @@ func New(confCMap cmap.ConcurrentMap, statusHandler NyaMQTTStatusHandler, messag
 	var nyamqttobj NyaMQTT = NyaMQTT{statusHandler: statusHandler, messageHandler: messageHandler}
 	nyamqttobj.hMessage = func(client mqtt.Client, msg mqtt.Message) {
 		var message string = string(msg.Payload())
-		nyamqttobj.messageHandler(msg.Topic(), message)
+		if nyamqttobj.statusHandler != nil {
+			nyamqttobj.messageHandler(msg.Topic(), message)
+		}
 	}
 	opts.SetDefaultPublishHandler(nyamqttobj.hMessage)
 	nyamqttobj.hConnect = func(client mqtt.Client) {
-		nyamqttobj.statusHandler(1, nil)
+		if nyamqttobj.statusHandler != nil {
+			nyamqttobj.statusHandler(1, nil)
+		}
 	}
 	opts.OnConnect = nyamqttobj.hConnect
 
 	nyamqttobj.hConnectAttempt = func(broker *url.URL, tlsCfg *tls.Config) *tls.Config {
-		nyamqttobj.statusHandler(2, nil)
+		if nyamqttobj.statusHandler != nil {
+			nyamqttobj.statusHandler(2, nil)
+		}
 		return tlsCfg
 	}
 	opts.OnConnectAttempt = nyamqttobj.hConnectAttempt
 
 	nyamqttobj.hConnectionLost = func(client mqtt.Client, err error) {
-		nyamqttobj.statusHandler(-1, nil)
+		if nyamqttobj.statusHandler != nil {
+			nyamqttobj.statusHandler(-1, nil)
+		}
 	}
 	opts.OnConnectionLost = nyamqttobj.hConnectionLost
 
 	nyamqttobj.hReconnecting = func(c mqtt.Client, co *mqtt.ClientOptions) {
-		nyamqttobj.statusHandler(-2, nil)
+		if nyamqttobj.statusHandler != nil {
+			nyamqttobj.statusHandler(-2, nil)
+		}
 	}
 	opts.OnReconnecting = nyamqttobj.hReconnecting
 
