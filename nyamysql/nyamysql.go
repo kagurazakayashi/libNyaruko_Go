@@ -49,10 +49,14 @@ func (p *NyaMySQL) QueryData(recn string, table string, where string, orderby st
 	}
 	if Debug != nil {
 		Debug.Println("\n" + dbq)
+	} else {
+		fmt.Println("[QueryData]", dbq)
 	}
 	query, err := p.db.Query(dbq)
 	if err != nil {
-		Debug.Printf("query faied, error:[%v]", err.Error())
+		if Debug != nil {
+			Debug.Printf("query faied, error:[%v]", err.Error())
+		}
 		return cmap.New(), err
 	}
 
@@ -72,7 +76,9 @@ func (p *NyaMySQL) QueryData(recn string, table string, where string, orderby st
 	i := 0
 	for query.Next() { //循环，让游标往下推
 		if err := query.Scan(scans...); err != nil { //query.Scan查询出来的不定长值放到scans[i] = &values[i],也就是每行都放在values里
-			Debug.Println(err)
+			if Debug != nil {
+				Debug.Println(err)
+			}
 			return cmap.New(), err
 		}
 		row := cmap.New()          //每行数据
@@ -122,13 +128,13 @@ func (p *NyaMySQL) AddRecord(table string, key string, val string, values string
 	}
 	if Debug != nil {
 		Debug.Println("\n" + dbq)
+	} else {
+		fmt.Println("[AddRecord]", dbq)
 	}
 	result, err := p.db.Exec(dbq)
 	if err != nil {
 		if Debug != nil {
 			Debug.Printf("data insert faied, error:[%v]", err.Error())
-		} else {
-			log.Printf("data insert faied, error:[%v]", err.Error())
 		}
 		return 0, err
 	}
@@ -167,6 +173,8 @@ func (p *NyaMySQL) UpdataRecord(table string, updata string, where string, Debug
 	}
 	if Debug != nil {
 		Debug.Println("\n" + dbq)
+	} else {
+		fmt.Println("[UpdataRecord]", dbq)
 	}
 	//更新uid=1的username
 	result, err := p.db.Exec(dbq)
@@ -221,13 +229,13 @@ func (p *NyaMySQL) DeleteRecord(table string, key string, value string, and stri
 	//删除uid=2的数据
 	if Debug != nil {
 		Debug.Println("\n" + dbq)
+	} else {
+		fmt.Println("[DeleteRecord]", dbq)
 	}
 	result, err := p.db.Exec(dbq)
 	if err != nil {
 		if Debug != nil {
 			Debug.Printf("delete faied, error:[%v]", err.Error())
-		} else {
-			log.Printf("delete faied, error:[%v]", err.Error())
 		}
 		return err
 	}
@@ -264,10 +272,14 @@ func (p *NyaMySQL) DeleteRecord(table string, key string, value string, and stri
 func (p *NyaMySQL) FreequeryData(sqlstr string, Debug *log.Logger) (cmap.ConcurrentMap, error) {
 	if Debug != nil {
 		Debug.Println("\n" + sqlstr)
+	} else {
+		fmt.Println("[FreequeryData]", sqlstr)
 	}
 	query, err := p.db.Query(sqlstr)
 	if err != nil {
-		Debug.Printf("query faied, error:[%v]", err.Error())
+		if Debug != nil {
+			Debug.Printf("query faied, error:[%v]", err.Error())
+		}
 		return cmap.New(), err
 	}
 
@@ -287,7 +299,9 @@ func (p *NyaMySQL) FreequeryData(sqlstr string, Debug *log.Logger) (cmap.Concurr
 	i := 0
 	for query.Next() { //循环，让游标往下推
 		if err := query.Scan(scans...); err != nil { //query.Scan查询出来的不定长值放到scans[i] = &values[i],也就是每行都放在values里
-			Debug.Println(err)
+			if Debug != nil {
+				Debug.Println(err)
+			}
 			return cmap.New(), err
 		}
 		row := cmap.New()          //每行数据
