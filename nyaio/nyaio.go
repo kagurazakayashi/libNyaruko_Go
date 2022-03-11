@@ -3,8 +3,10 @@ package nyatools
 import (
 	"bufio"
 	"io"
+	"io/fs"
 	"io/ioutil"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -30,6 +32,20 @@ func SetNyaReadFileLineHandler(handler NyaReadFileLineHandler) {
 }
 
 // </代理方法>
+
+// <可選配置>
+type Option struct {
+	permission uint32 // 建立檔案/資料夾的許可權。預設按 UMASK 022，預設目錄許可權為755，預設檔案許可權為644。
+}
+type OptionConfig func(*Option)
+
+func Option_permission(v uint32) OptionConfig {
+	return func(p *Option) {
+		p.permission = v
+	}
+}
+
+// </可選配置>
 
 var (
 	readFileLineHandler NyaReadFileLineHandler
@@ -134,15 +150,21 @@ func FileInfo(filePath string) (NyaFileInfo, error) {
 //FileCopy: 複製檔案
 //	`srcPath` string 原始檔案路徑
 //	`dstPath` string 目標檔案路徑
+//  `options` ...OptionConfig 可選配置，執行 `Option_*` 函式輸入
+//		`permission` uint32 新建檔案的許可權，預設 644
 //	return    int64  寫入的資料量
 //	return    error  可能遇到的錯誤
-func FileCopy(srcPath string, dstPath string) (written int64, err error) {
+func FileCopy(srcPath string, dstPath string, options ...OptionConfig) (written int64, err error) {
+	option := &Option{permission: 644}
+	for _, o := range options {
+		o(option)
+	}
 	src, err := os.Open(srcPath)
 	if err != nil {
 		return
 	}
 	defer src.Close()
-	dst, err := os.OpenFile(dstPath, os.O_WRONLY|os.O_CREATE, 0755)
+	dst, err := os.OpenFile(dstPath, os.O_WRONLY|os.O_CREATE, fs.FileMode(option.permission))
 	if err != nil {
 		return
 	}
@@ -152,16 +174,72 @@ func FileCopy(srcPath string, dstPath string) (written int64, err error) {
 
 //FolderCreate: 新建資料夾
 //	`dirPath` string 新建文件夹路径
+//  `options` ...OptionConfig 可選配置，執行 `Option_*` 函式輸入
+//		`permission` uint32 新建資料夾的許可權，預設 755
 //	return    bool   是否实际创建（若为 false 且无 error ，则文件夹已经存在）
 //	return    error  可能遇到的错误
-func FolderCreate(dirPath string) (bool, error) {
+func FolderCreate(dirPath string, options ...OptionConfig) (bool, error) {
+	option := &Option{permission: 755}
+	for _, o := range options {
+		o(option)
+	}
 	_, err := os.Stat(dirPath)
 	if err == nil {
 		return false, nil
 	}
-	err = os.MkdirAll(dirPath, 0755)
+	err = os.MkdirAll(dirPath, fs.FileMode(option.permission))
 	if err != nil {
 		return false, err
 	}
 	return true, nil
+}
+
+//FileList: 獲取指定資料夾下的所有檔案
+//	`dirPth`    string 要搜尋的資料夾路徑
+//	`recursive` bool   是否需要遍歷子資料夾
+//	`suffix`    string 關鍵詞，只列出包含指定關鍵詞的檔名（英文不區分大小寫）
+func FileList(dirPth string, recursive bool, suffix string) ([]string, error) {
+	var files []string
+	dir, err := ioutil.ReadDir(dirPth)
+	if err != nil {
+		return nil, err
+	}
+	// PthSep := string(os.PathSeparator)
+	suffix = strings.ToUpper(suffix) // 忽略大小寫
+	for _, fi := range dir {
+		if fi.IsDir() {
+			if recursive {
+				subFiles, err := FileList(dirPth, recursive, suffix)
+				if err != nil {
+					return nil, err
+				} else {
+					files = append(files, subFiles...)
+				}
+			} else {
+				continue
+			}
+		}
+		if strings.HasSuffix(strings.ToUpper(fi.Name()), suffix) { //匹配文件
+			// files = append(files, dirPth+PthSep+fi.Name())
+			files = append(files, dirPth+"/"+fi.Name())
+		}
+	}
+	return files, nil
+}
+
+//ListDir: 獲取指定目錄下的所有資料夾
+func ListDir(dirPth string) ([]string, error) {
+	var files []string
+	dir, err := ioutil.ReadDir(dirPth)
+	if err != nil {
+		return nil, err
+	}
+	// PthSep := string(os.PathSeparator)
+	for _, fi := range dir {
+		if fi.IsDir() {
+			// files = append(files, dirPth+PthSep+fi.Name())
+			files = append(files, dirPth+"/"+fi.Name())
+		}
+	}
+	return files, nil
 }
