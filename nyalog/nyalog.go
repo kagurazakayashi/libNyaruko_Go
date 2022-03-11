@@ -1,31 +1,24 @@
 package nyalog
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
+
+	"github.com/phprao/ColorOutput"
 )
 
 var (
 	timeZone             *time.Location
 	timeZoneDefaultName  string = "Asia/Shanghai"
 	timeZoneDefaultFixed int    = 8
-)
-
-// <颜色配置>
-type ConsoleColor int8
-
-const (
-	ConsoleColorBlack  ConsoleColor = 0
-	ConsoleColorRed    ConsoleColor = 1
-	ConsoleColorGreen  ConsoleColor = 2
-	ConsoleColorYellow ConsoleColor = 3
-	ConsoleColorBlue   ConsoleColor = 4
-	ConsoleColorPurple ConsoleColor = 5
-	ConsoleColorCyan   ConsoleColor = 6
-	ConsoleColorWhte   ConsoleColor = 7
 )
 
 type LogLevel int8
@@ -39,57 +32,131 @@ const (
 	LogLevelOK      LogLevel = 5
 )
 
-//將 ConsoleColor 物件轉換為顏色字串
-func (p ConsoleColor) String() string {
-	consoleColorString := [8]string{"black", "red", "green", "yellow", "blue", "purple", "cyan", "whte"}
-	return consoleColorString[p]
+//Log: 向終端輸出日誌
+//	`level` LogLevel 日誌等級
+//	`obj` ...interface{} 要輸出的變數（會自動嘗試轉換成字串）
+//	日誌输出示例: "[E 2022-03-11 15:04:05 main.main:18] ERROR"
+func Log(level LogLevel, obj ...interface{}) {
+	fmt.Println(logString(level, obj))
 }
 
-//LogLevelData: 根據日誌記錄級別來確定輸出顏色
-//	`lvl`  LogLevel     日誌記錄級別
-//	return ConsoleColor 顏色
-func LogLevelData(lvl LogLevel) ConsoleColor {
-	switch lvl {
-	case LogLevelDebug:
-		return ConsoleColorWhte
-	case LogLevelInfo:
-		return ConsoleColorCyan
-	case LogLevelWarning:
-		return ConsoleColorYellow
-	case LogLevelError:
-		return ConsoleColorRed
-	case LogLevelClash:
-		return ConsoleColorRed
-	case LogLevelOK:
-		return ConsoleColorGreen
-	default:
-		return ConsoleColorCyan
+//LogD: 用於除錯時快速找到臨時性輸出，以紫色底色輸出
+//	`obj` ...interface{} 要輸出的變數（會自動嘗試轉換成字串）
+func LogD(obj ...interface{}) {
+	ColorOutput.Colorful.WithFrontColor(ConsoleColorWhite.String()).WithBackColor(ConsoleColorPurple.String()).Println(strings.Join(interfaceArray2StringArray(obj), " "))
+}
+
+//LogF: 向終端輸出日誌，並將日誌內容寫入到檔案，路徑為 `當前執行檔案.log` 。
+//	`level` LogLevel 日誌等級
+//	`obj` ...interface{} 要輸出的變數（會自動嘗試轉換成字串）
+func LogF(level LogLevel, obj ...interface{}) {
+	LogFF(level, "", obj...)
+}
+
+//LogFF: 向終端輸出日誌，並將日誌內容寫入到指定自定義檔案。
+//	`level` LogLevel 日誌等級
+//	`path`  string   日誌檔案路徑
+//	`obj` ...interface{} 要輸出的變數（會自動嘗試轉換成字串）
+func LogFF(level LogLevel, path string, obj ...interface{}) {
+	var logStr string = logString(level, obj)
+	var logPath string = path
+	if len(path) == 0 {
+		fmt.Println(logStr)
+		file, err := exec.LookPath(os.Args[0])
+		if err != nil {
+			return
+		}
+		logPath, err = filepath.Abs(file)
+		if err != nil {
+			return
+		}
+		logPath += ".log"
 	}
+	fd, _ := os.OpenFile(logPath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
+	buf := []byte(logStr)
+	fd.Write(buf)
+	fd.Close()
 }
 
-// </颜色配置>
+//LogC: 向終端輸出日誌，根據日誌等級自動決定輸出顏色
+//	`level` LogLevel 日誌等級
+//	`obj` ...interface{} 要輸出的變數（會自動嘗試轉換成字串）
+func LogC(level LogLevel, obj ...interface{}) {
+	var colorStr string = LogLevelData(level).String()
+	var logStr string = logString(level, obj)
+	ColorOutput.Colorful.WithFrontColor(colorStr).Println(logStr)
+}
 
-// 向終端輸出日誌
-//	`a` ...interface{} 要輸出的變數（會自動嘗試轉換成字串）
-func Log(a ...interface{}) {
+//LogCC: 向終端輸出日誌，並指定輸出顏色
+//	`level` LogLevel     日誌等級
+//	`color` ConsoleColor 文字顏色
+//	`obj` ...interface{} 要輸出的變數（會自動嘗試轉換成字串）
+func LogCC(level LogLevel, color ConsoleColor, obj ...interface{}) {
+	var logStr string = logString(level, obj)
+	ColorOutput.Colorful.WithFrontColor(color.String()).Println(logStr)
+}
+
+//LogCCC: 向終端輸出日誌，並指定輸出前景顏色和背景顏色
+//	`level`           LogLevel     日誌等級
+//	`color`           ConsoleColor 文字顏色
+//	`backgroundColor` ConsoleColor 文字底色
+//	`obj` ...interface{} 要輸出的變數（會自動嘗試轉換成字串）
+func LogCCC(level LogLevel, color ConsoleColor, backgroundColor ConsoleColor, obj ...interface{}) {
+	var logStr string = logString(level, obj)
+	ColorOutput.Colorful.WithFrontColor(color.String()).WithBackColor(backgroundColor.String()).Println(logStr)
+}
+
+//logString 将输入的参数组装成字符串
+//	`level` LogLevel 日誌等級
+//	`obj` ...interface{} 要輸出的變數（會自動嘗試轉換成字串）
+//	return string    準備輸出的字串
+func logString(level LogLevel, obj []interface{}) string {
+	var prefix string = logPrefix(level)
+	var infoArr []string = interfaceArray2StringArray(obj)
+	return prefix + strings.Join(infoArr, " ")
+}
+
+//prefix: 日誌輸出字首
+//	`level` LogLevel 日誌等級
+//	return  []string 字首字串單元陣列
+//	[日誌等級字元, 日期時間, 函式名稱:行號]
+func logPrefix(level LogLevel) string {
 	if timeZone == nil {
 		timeZone = GetTimeZone("", -100)
 	}
-	var parameterLength = len(a)
-	var strArr []string = make([]string, parameterLength)
-	for i, b := range a { // interface{}
-		strArr[i] = ToString(b)
+	var s [2]string = [2]string{"[", "]"}
+	var ExArr []string = []string{
+		s[0] + level.String() + s[1],
+		s[0] + timeStamp2timeString(0) + s[1],
+		s[0] + logFuncInfo() + s[1],
 	}
-	fmt.Println(strArr)
+	return strings.Join(ExArr, "")
 }
 
-//logF: 獲取當前函式名稱
-//	return string 當前函式名稱
-func FuncName() string {
-	pc := make([]uintptr, 1)
-	runtime.Callers(2, pc)
-	f := runtime.FuncForPC(pc[0])
-	return f.Name()
+//interfaceArray2StringArray: 將泛型別陣列轉換為字串陣列
+//	`objs` []interface{} 泛型別陣列
+//	return []string      字串陣列
+func interfaceArray2StringArray(objs []interface{}) []string {
+	var parameterLength = len(objs)
+	if parameterLength == 0 {
+		return []string{}
+	}
+	var strArr []string = make([]string, parameterLength)
+	for i, o := range objs { // interface{}
+		strArr[i] = ToString(o)
+	}
+	return strArr
+}
+
+//logFuncInfo: 獲取當前程式碼行號、函式名稱
+//	return string 函式名稱:行號
+func logFuncInfo() string {
+	pc, _, line, ok := runtime.Caller(2)
+	if !ok {
+		return ""
+	}
+	f := runtime.FuncForPC(pc)
+	return f.Name() + ":" + strconv.Itoa(line)
 }
 
 //toString: 將各種資料型別轉換為字串
@@ -132,8 +199,21 @@ func ToString(v interface{}) string {
 	default:
 		newValue, _ := json.Marshal(v)
 		s = string(newValue)
+		s = formatJSON(s)
 	}
 	return s
+}
+
+//JSON: 格式化 JSON ，最佳化輸出的易讀性
+//	`data` string 源 JSON 字符串
+//	return string 美化后的 JSON 字符串
+func formatJSON(data string) string {
+	var str bytes.Buffer
+	var err error = json.Indent(&str, []byte(data), "", "    ")
+	if err != nil {
+		return ""
+	}
+	return str.String()
 }
 
 //GetTimeZone: 設定和獲取當前時區。

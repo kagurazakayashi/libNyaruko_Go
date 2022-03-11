@@ -6,6 +6,8 @@ import (
 	"io/fs"
 	"io/ioutil"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -242,4 +244,25 @@ func ListDir(dirPth string) ([]string, error) {
 		}
 	}
 	return files, nil
+}
+
+//GetCurrentPath: 獲取當前程式所在資料夾路徑
+//	return string 當前程式所在資料夾路徑
+func GetCurrentPath() string {
+	file, err := exec.LookPath(os.Args[0])
+	if err != nil {
+		return ""
+	}
+	path, err := filepath.Abs(file)
+	if err != nil {
+		return ""
+	}
+	i := strings.LastIndex(path, "/")
+	if i < 0 {
+		i = strings.LastIndex(path, "\\")
+	}
+	if i < 0 {
+		return ""
+	}
+	return string(path[0 : i+1])
 }
