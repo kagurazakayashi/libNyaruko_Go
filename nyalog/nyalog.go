@@ -217,21 +217,24 @@ func formatJSON(data string) string {
 }
 
 //GetTimeZone: 設定和獲取當前時區。
+//	优先判断`zone`是否为""
 //	`zone`     string 時區字串，如 "Asia/Shanghai" 。提供空字串則採用變數 timeZoneDefaultName 。
 //	`fixedZone` int    根據 CST 加減小時數補償，範圍 -12 ~ 12 ，提供超範圍數值則採用變數 timeZoneDefaultFixed 。該項只在從系統獲取 zone 失敗後有效。
 //	return *time.Location 時區物件
-func GetTimeZone(zone string, fixedZone int) *time.Location {
+func GetTimeZone(zone string, fixedZone int) (timeZoneN *time.Location, err error) {
 	if zone == "" {
-		zone = timeZoneDefaultName
+		if fixedZone < -12 || fixedZone > 12 {
+			return nil, fmt.Errorf("fixedZone範圍应为-12 ~ 12")
+		} else {
+			timeZoneN = time.FixedZone("CST", fixedZone*3600)
+		}
+	} else {
+		timeZoneN, err = time.LoadLocation(zone)
+		if err != nil {
+			return nil, err
+		}
 	}
-	if fixedZone < -12 || fixedZone > 12 {
-		fixedZone = timeZoneDefaultFixed
-	}
-	timeZoneN, err := time.LoadLocation(zone)
-	if err != nil {
-		timeZoneN = time.FixedZone("CST", fixedZone*3600)
-	}
-	return timeZoneN
+	return timeZoneN, nil
 }
 
 //timeStamp2timeString: 從時間戳獲取當前時間字串

@@ -94,8 +94,10 @@ func New(configJsonString string) *NyaRedis {
 
 //Close: 關閉資料庫連線
 func (p *NyaRedis) Close() {
-	p.db.Close()
-	p.db = nil
+	if p.db != nil {
+		p.db.Close()
+		p.db = nil
+	}
 }
 
 //Error: 獲取上一次操作時可能產生的錯誤
@@ -203,7 +205,7 @@ func (p *NyaRedis) Keys(keyPattern string) []string {
 //	`options` ...OptionConfig 可選配置，執行 `Option_*` 函式輸入
 //		`isErrorStop` bool 在批次操作中是否遇到錯誤就停止，否則忽略錯誤，會記錄最近一次錯誤，預設值 `false`
 //	return bool 操作是否成功，只要批次操作中有一次失敗即為 false ，若不成功可使用 `Error()` 或 `ErrorString()` 獲取錯誤資訊
-func (p *NyaRedis) Delete(keys []string, options ...OptionConfig) bool {
+func (p *NyaRedis) Delete(keys []string, options ...OptionConfig) error {
 	option := &Option{isErrorStop: false}
 	for _, o := range options {
 		o(option)
@@ -211,10 +213,10 @@ func (p *NyaRedis) Delete(keys []string, options ...OptionConfig) bool {
 	for _, k := range keys {
 		p.err = p.db.Del(ctx, k).Err()
 		if p.err != nil && option.isErrorStop {
-			return false
+			return fmt.Errorf("Delete key:", k, "error[", p.err.Error(), "]")
 		}
 	}
-	return p.err != nil
+	return nil
 }
 
 //DeleteMulti: 根據萬用字元資料名稱刪除資料

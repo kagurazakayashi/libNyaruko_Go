@@ -94,6 +94,8 @@ func (p *NyaMySQL) ErrorString() string {
 
 //Close: 斷開與資料庫的連線
 func (p *NyaMySQL) Close() {
-	p.db.Close()
-	p.db = nil
+	if p.db != nil {
+		p.db.Close()
+		p.db = nil
+	}
 }
