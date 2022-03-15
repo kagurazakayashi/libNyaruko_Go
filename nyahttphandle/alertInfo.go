@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -91,8 +92,8 @@ func AlertInfoTemplateLoad(filePath string) {
 //	return       string 取出的文字
 //	示例：配置檔案第一行為 `id,en,chs`, 第二行為 `200,OK,成功` 時：
 //	AlertInfoJson(1, 200) -> {"code":"200","msg":"OK"}
-func AlertInfoJson(languageID int, massageID int) []byte {
-	return AlertInfoJsonKV(languageID, massageID, "", "")
+func AlertInfoJson(w http.ResponseWriter, languageID int, massageID int) []byte {
+	return AlertInfoJsonKV(w, languageID, massageID, "", "")
 }
 
 //AlertInfoJsonKV: 獲取可以直接用於返回客戶端的訊息 JSON 模板，並可以附帶一個自定義鍵值
@@ -103,8 +104,8 @@ func AlertInfoJson(languageID int, massageID int) []byte {
 //	return       string 取出的文字
 //	示例：配置檔案第一行為 `id,en,chs`, 第二行為 `200,OK,成功` 時：
 //	AlertInfoJsonKV(1, 200, "token", "1145141919810") -> {"code":"1001","msg":"OK","token":"1145141919810"}
-func AlertInfoJsonKV(languageID int, massageID int, key string, value interface{}) []byte {
-	var jsonMap map[string]interface{} = alertInfoJsonGenMap(languageID, massageID)
+func AlertInfoJsonKV(w http.ResponseWriter, languageID int, massageID int, key string, value interface{}) []byte {
+	code, jsonMap := alertInfoJsonGenMap(languageID, massageID)
 	if value != "" {
 		if key == "" {
 			jsonMap["data"] = value
@@ -112,6 +113,7 @@ func AlertInfoJsonKV(languageID int, massageID int, key string, value interface{
 			jsonMap[key] = value
 		}
 	}
+	w.WriteHeader(code)
 	return alertInfoJsonGenJson(jsonMap)
 }
 
@@ -119,9 +121,9 @@ func AlertInfoJsonKV(languageID int, massageID int, key string, value interface{
 //	`languageID` int 語言 ID
 //	`massageID`  int 資訊 ID
 //	return map[string]string 待生成 JSON 的字典
-func alertInfoJsonGenMap(languageID int, massageID int) map[string]interface{} {
-	var massageText string = alertInfoGet(languageID, massageID)
-	return map[string]interface{}{
+func alertInfoJsonGenMap(languageID int, massageID int) (int, map[string]interface{}) {
+	code, massageText := alertInfoGet(languageID, massageID)
+	return code, map[string]interface{}{
 		"code": massageID,
 		"msg":  massageText,
 	}
@@ -142,13 +144,18 @@ func alertInfoJsonGenJson(jsonMap map[string]interface{}) []byte {
 //	`languageID` int    語言 ID
 //	`massageID`  int    資訊 ID
 //	return       string 取出的文字
-//	示例：配置檔案第一行為 `id,en,chs`, 第二行為 `200,OK,成功` 時：
+//	示例：配置檔案第一行為 `id,code,en,chs`, 第二行為 `200,OK,成功` 時：
 //	alertInfoGet(1, 200) -> "OK"
-func alertInfoGet(languageID int, massageID int) string {
+func alertInfoGet(languageID int, massageID int) (int, string) {
 	if len(alertinfo) == 0 || languageID >= alertinfoLanguageLen || massageID > alertinfoMaxID {
-		return ""
+		return 400, ""
 	}
-	return alertinfo[languageID][massageID]
+
+	code, err := strconv.Atoi(alertinfo[1][massageID])
+	if err != nil {
+		return 400, alertinfo[languageID][9999]
+	}
+	return code, alertinfo[languageID][massageID]
 }
 
 //alertInfoSub: 識別雙引號轉義
