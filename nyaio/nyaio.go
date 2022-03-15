@@ -1,4 +1,4 @@
-package nyatools
+package nyaio
 
 import (
 	"bufio"
