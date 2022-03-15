@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"hash"
+	"io"
 	"io/ioutil"
 	"os"
 )
@@ -25,7 +26,7 @@ func MD5(data string) string {
 //	`filepath` string 要進行雜湊的文件地址
 //	return string 雜湊之後的字串。如果失敗則返回空字串。
 //	return error 错误信息
-func MD5forFile(filepath string) (string, error) {
+func MD5forFilePath(filepath string) (string, error) {
 	f, err := os.Open(filepath)
 	if err != nil {
 		return "", err
@@ -37,6 +38,19 @@ func MD5forFile(filepath string) (string, error) {
 	md5 := fmt.Sprintf("%x", md5.Sum(body))
 	// runtime.GC()
 	f.Close()
+	return md5, nil
+}
+
+//计算文件MD5 編碼字串（雜湊）
+//	`f` io.Reader 要進行雜湊的文件
+//	return string 雜湊之後的字串。如果失敗則返回空字串。
+//	return error 错误信息
+func MD5forFile(f io.Reader) (string, error) {
+	body, err := ioutil.ReadAll(f)
+	if err != nil {
+		return "", err
+	}
+	md5 := fmt.Sprintf("%x", md5.Sum(body))
 	return md5, nil
 }
 
