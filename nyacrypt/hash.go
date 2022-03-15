@@ -7,7 +7,10 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
+	"fmt"
 	"hash"
+	"io/ioutil"
+	"os"
 )
 
 //MD5 編碼字串（雜湊）
@@ -16,6 +19,25 @@ import (
 //	示例: MD5("Hello, World!") -> (32) 65A8E27D8879283831B664BD8B7F0AD4
 func MD5(data string) string {
 	return hashEncode(5, data)
+}
+
+//计算文件MD5 編碼字串（雜湊）
+//	`filepath` string 要進行雜湊的文件地址
+//	return string 雜湊之後的字串。如果失敗則返回空字串。
+//	return error 错误信息
+func MD5forFile(filepath string) (string, error) {
+	f, err := os.Open(filepath)
+	if err != nil {
+		return "", err
+	}
+	body, err := ioutil.ReadAll(f)
+	if err != nil {
+		return "", err
+	}
+	md5 := fmt.Sprintf("%x", md5.Sum(body))
+	// runtime.GC()
+	f.Close()
+	return md5, nil
 }
 
 //SHA1 編碼字串（雜湊）
