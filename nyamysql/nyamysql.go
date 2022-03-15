@@ -246,6 +246,52 @@ func (p *NyaMySQL) DeleteRecord(table string, key string, value string, and stri
 	return nil
 }
 
+//从SQL数据库无主键表中删除行
+//	所有关键字除*以外需要用``包裹
+//	`sqldb`		string		mysql数据库名，使用默认值只需填写""
+//	`table`		string		从哪个表中查询不需要``包裹
+//	`keys`		[]string	根据哪个关键字删除
+//	`values`	[][]string	关键字对应的值
+func (p *NyaMySQL) DeleteRecordNoPK(table string, keys []string, values [][]string, Debug *log.Logger) error {
+	for _, v := range values {
+		if len(v) != len(keys) {
+			return fmt.Errorf("'values'内容数量与'keys'不符")
+		}
+	}
+	var dbq string = "delete from `" + table + "` where ("
+	where := ""
+	for _, v := range values {
+		if where != "" {
+			where += ") OR ("
+		}
+		for ii, vv := range keys {
+			if where != "" && ii != 0 {
+				where += " AND "
+			}
+			where += "`" + vv + "`='" + v[ii] + "'"
+		}
+	}
+	dbq += where + ")"
+	//删除uid=2的数据
+	if Debug != nil {
+		Debug.Println("\n" + dbq)
+	} else {
+		fmt.Println("[DeleteRecord]", dbq)
+	}
+	result, err := p.db.Exec(dbq)
+	if err != nil {
+		if Debug != nil {
+			Debug.Printf("delete faied, error:[%v]", err.Error())
+		}
+		return err
+	}
+	num, _ := result.RowsAffected()
+	if Debug != nil {
+		Debug.Printf("delete success, affected rows:[%d]\n", num)
+	}
+	return nil
+}
+
 //从SQL数据库中查找
 //	所有关键字除*以外需要用``包裹
 //	`sqldb`		string		mysql数据库名，使用默认值只需填写""
