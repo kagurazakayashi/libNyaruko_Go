@@ -1,3 +1,4 @@
+// SQL 語句生成器
 package nyasql
 
 import (

@@ -1,3 +1,4 @@
+// 隨機資訊生成器
 package nyacrypt
 
 import (

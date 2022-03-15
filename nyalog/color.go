@@ -1,3 +1,4 @@
+// 終端輸出顏色控制
 package nyalog
 
 type ConsoleColor int8

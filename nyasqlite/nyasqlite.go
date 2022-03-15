@@ -1,3 +1,4 @@
+// SQLite 資料庫操作
 package nyasqlite
 
 import (
@@ -17,9 +18,9 @@ type NyaSQLiteT struct {
 //New: 建立新的 NyaSQLite 例項
 //	`configJsonString` string 配置 JSON 字串
 //	從配置 JSON 檔案中取出的本模組所需的配置段落 JSON 字串
-//  示例配置數值參考 config.template.json
+//	示例配置數值參考 config.template.json
 //	本模組所需配置項: sqlite_ver, sqlite_file
-//  return *NyaSQLite 新的 NyaSQLite 例項
+//	return *NyaSQLite 新的 NyaSQLite 例項
 //	下一步使用 `Error()` 或 `ErrorString()` 檢查是否有錯誤
 func New(configJsonString string) *NyaSQLite {
 	var configNG string = "NO CONFIG KEY : "
@@ -76,13 +77,14 @@ func (p *NyaSQLite) ErrorString() string {
 	return p.err.Error()
 }
 
-//向SQL数据库中添加
+//SqliteAddRecord: 向SQL数据库中添加
 //	所有关键字除*以外需要用``包裹
-//	`table`		string		从哪个表中查询不需要``包裹
-//	`key`		string		需要添加的列，需要以,分割
-//	`val`		string		与key对应的值，以,分割
-//	`values`	string		(此项不为"",val无效)添加多行数据与key对应的值，以,分割,例(1,2),(2,3)
-//	return		int64 和 error 对象，返回添加行的id
+//	`table`  string 从哪个表中查询不需要``包裹
+//	`key`    string 需要添加的列，需要以,分割
+//	`val`    string 与key对应的值，以,分割
+//	`values` string (此项不为"",val无效)添加多行数据与key对应的值，以,分割,例(1,2),(2,3)
+//	return   int64  添加行的id
+//	return   error  可能发生的错误
 func (p *NyaSQLite) SqliteAddRecord(table string, key string, val string, values string) (int64, error) {
 	var dbq string = "insert into `" + table + "` (" + key + ")" + "VALUES "
 	if values != "" {

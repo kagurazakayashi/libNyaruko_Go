@@ -1,3 +1,4 @@
+// 日誌輸出和記錄
 package nyalog
 
 import (

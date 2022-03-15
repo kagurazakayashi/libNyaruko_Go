@@ -1,3 +1,4 @@
+// MySQL 資料庫操作
 package nyamysql
 
 import (

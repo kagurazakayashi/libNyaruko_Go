@@ -1,3 +1,4 @@
+// 提示資訊 JSON 模板
 package nyahttphandle
 
 import (
@@ -57,7 +58,6 @@ func AlertInfoTemplateLoad(filePath string) {
 			}
 			firstLine = false
 		} else if len(lineArr)-1 == alertinfoLanguageLen {
-			// TODO: 去引号
 			configTxts = append(configTxts, lineArr)
 			infoID, err := strconv.Atoi(lineArr[0])
 			if err != nil {
@@ -162,7 +162,7 @@ func alertInfoGet(languageID int, massageID int) (int, string) {
 //	`line` string   CSV 單行字串
 //	return []string 本行中每列的文字資料
 //	示例: 100,"Hello, ""World""!","你好，“世界”！"
-//  -> ['100', 'Hello, "World"!', '你好，“世界”！']
+//	-> ['100', 'Hello, "World"!', '你好，“世界”！']
 func alertInfoSub(line string) []string {
 	var nowLineArr []string = []string{}
 	line = strings.ReplaceAll(line, "\"\"", "\"")   // 轉義引號

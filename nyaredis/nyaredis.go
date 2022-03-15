@@ -1,3 +1,4 @@
+// Redis 資料庫操作
 package nyaredis
 
 import (
@@ -49,9 +50,9 @@ func Option_isErrorStop(v bool) OptionConfig {
 //New: 建立新的 NyaRedis 例項
 //	`configJsonString` string 配置 JSON 字串
 //	從配置 JSON 檔案中取出的本模組所需的配置段落 JSON 字串
-//  示例配置數值參考 config.template.json
+//	示例配置數值參考 config.template.json
 //	本模組所需配置項: redis_addr, redis_port, redis_pwd, redis_db
-//  return NyaRedis 新的 NyaRedis 例項
+//	return NyaRedis 新的 NyaRedis 例項
 //	下一步使用 `Error()` 或 `ErrorString()` 檢查是否有錯誤
 func New(configJsonString string) *NyaRedis {
 	var configNG string = "NO CONFIG KEY : "

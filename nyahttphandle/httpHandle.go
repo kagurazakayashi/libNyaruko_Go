@@ -1,3 +1,4 @@
+// HTTP 伺服器
 package nyahttphandle
 
 import (
@@ -12,6 +13,9 @@ import (
 // 	err error
 // }
 
+//Init: 初始化 HTTP 伺服器
+//	`confstr` string 配置 JSON 字串
+//	`handlers` ...func(http.ResponseWriter, *http.Request) HTTP 收取回調
 func Init(confstr string, handlers ...func(http.ResponseWriter, *http.Request)) error {
 	listenandserve := gjson.Get(confstr, "listenandserve")
 	if !listenandserve.Exists() {
@@ -45,7 +49,7 @@ func Init(confstr string, handlers ...func(http.ResponseWriter, *http.Request)) 
 		pattern := suburl.String() + patterns.Array()[i].String()
 		http.HandleFunc(pattern, v)
 	}
-	//设置监听的端口
+	// 設定監聽的埠
 	err := http.ListenAndServe(listenandserve.String(), nil)
 	if err != nil {
 		return err

@@ -1,3 +1,4 @@
+// 雜湊計算
 package nyacrypt
 
 import (
@@ -14,7 +15,7 @@ import (
 	"os"
 )
 
-//MD5 編碼字串（雜湊）
+//MD5: 編碼字串（雜湊）
 //	`data` string 要進行雜湊的源字串
 //	return string 雜湊之後的字串。如果失敗則返回空字串。
 //	示例: MD5("Hello, World!") -> (32) 65A8E27D8879283831B664BD8B7F0AD4
@@ -22,7 +23,7 @@ func MD5(data string) string {
 	return hashEncode(5, data)
 }
 
-//计算文件MD5 編碼字串（雜湊）
+//MD5forFilePath: 計算檔案 MD5 編碼字串（雜湊）
 //	`filepath` string 要進行雜湊的文件地址
 //	return string 雜湊之後的字串。如果失敗則返回空字串。
 //	return error 错误信息
@@ -41,8 +42,8 @@ func MD5forFilePath(filepath string) (string, error) {
 	return md5, nil
 }
 
-//计算文件MD5 編碼字串（雜湊）
-//	`f` io.Reader 要進行雜湊的文件
+//MD5forFile: 計算檔案 MD5 編碼字串（雜湊）
+//	`f` io.Reader 要進行雜湊的檔案
 //	return string 雜湊之後的字串。如果失敗則返回空字串。
 //	return error 错误信息
 func MD5forFile(f io.Reader) (string, error) {
@@ -54,7 +55,7 @@ func MD5forFile(f io.Reader) (string, error) {
 	return md5, nil
 }
 
-//SHA1 編碼字串（雜湊）
+//SHA1: 編碼字串（雜湊）
 //	`data` string 要進行雜湊的源字串
 //	return string 雜湊之後的字串。如果失敗則返回空字串。
 //	示例: SHA1("Hello, World!") -> (40) 0a0a9f2a6772942557ab5355d76af442f8f65e01
@@ -62,7 +63,7 @@ func SHA1(data string) string {
 	return hashEncode(1, data)
 }
 
-//SHA256 編碼字串（雜湊）
+//SHA256: 編碼字串（雜湊）
 //	`data` string 要進行雜湊的源字串
 //	return string 雜湊之後的字串。如果失敗則返回空字串。
 //	示例: SHA256("Hello, World!") -> (64) dffd6021bb2bd5b0af676290809ec3a53191dd81c7f70a4b28688a362182986f
@@ -70,7 +71,7 @@ func SHA256(data string) string {
 	return hashEncode(256, data)
 }
 
-//SHA512 編碼字串（雜湊）
+//SHA512: 編碼字串（雜湊）
 //	`data` string 要進行雜湊的源字串
 //	return string 雜湊之後的字串。如果失敗則返回空字串。
 //	示例: SHA512("Hello, World!") -> (128) 374d794a95cdcfd8b35993185fef9ba368f160d8daf432d08ba9f1ed1e5abe6cc69291e0fa2fe0006a52570ef18c19def4e617c33ce52ef0a6e5fbe318cb0387
@@ -78,7 +79,7 @@ func SHA512(data string) string {
 	return hashEncode(512, data)
 }
 
-//HMAC 編碼字串（雜湊）
+//HMAC: 編碼字串（雜湊）
 //	`mode` int16  基礎雜湊模式 1:SHA1, 5:MD5, 256:SHA256, 512:SHA512
 //	`data` string 要進行雜湊的源字串
 //	`key`  string 雜湊所需的金鑰

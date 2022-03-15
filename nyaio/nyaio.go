@@ -1,3 +1,4 @@
+// 檔案讀寫
 package nyaio
 
 import (
@@ -22,13 +23,13 @@ type NyaFileInfo struct {
 
 // <代理方法>
 
+type NyaReadFileLineHandler func(lineText string, lineNum uint, isEnd bool, err error)
+
 //NyaReadFileLineHandler: FileReadLine 的代理方法
 //	`lineText` string 當前行的文字內容
 //	`lineNum`  uint   當前行號
 //	`isEnd`    bool   本條是否為檔案的末尾
 //	return     error  可能遇到的錯誤
-type NyaReadFileLineHandler func(lineText string, lineNum uint, isEnd bool, err error)
-
 func SetNyaReadFileLineHandler(handler NyaReadFileLineHandler) {
 	readFileLineHandler = handler
 }
