@@ -151,7 +151,7 @@ func alertInfoGet(languageID int, massageID int) (int, string) {
 		return 400, ""
 	}
 
-	code, err := strconv.Atoi(alertinfo[1][massageID])
+	code, err := strconv.Atoi(alertinfo[0][massageID])
 	if err != nil {
 		return 400, alertinfo[languageID][9999]
 	}
