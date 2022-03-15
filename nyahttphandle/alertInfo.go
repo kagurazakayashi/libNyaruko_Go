@@ -103,8 +103,8 @@ func AlertInfoJson(languageID int, massageID int) []byte {
 //	return       string 取出的文字
 //	示例：配置檔案第一行為 `id,en,chs`, 第二行為 `200,OK,成功` 時：
 //	AlertInfoJsonKV(1, 200, "token", "1145141919810") -> {"code":"1001","msg":"OK","token":"1145141919810"}
-func AlertInfoJsonKV(languageID int, massageID int, key string, value string) []byte {
-	var jsonMap map[string]string = alertInfoJsonGenMap(languageID, massageID)
+func AlertInfoJsonKV(languageID int, massageID int, key string, value interface{}) []byte {
+	var jsonMap map[string]interface{} = alertInfoJsonGenMap(languageID, massageID)
 	if value != "" {
 		if key == "" {
 			jsonMap["data"] = value
@@ -115,31 +115,14 @@ func AlertInfoJsonKV(languageID int, massageID int, key string, value string) []
 	return alertInfoJsonGenJson(jsonMap)
 }
 
-//AlertInfoJsonKVM: 獲取可以直接用於返回客戶端的訊息 JSON 模板，並可以附帶多個自定義鍵值
-//	`languageID` int 語言 ID
-//	`massageID`  int 資訊 ID
-//	`keyValue` map[string]string 自定義鍵值
-//	return       string 取出的文字
-//	示例：配置檔案第一行為 `id,en,chs`, 第二行為 `200,OK,成功` 時：
-//	AlertInfoJsonKVM(1, 200, map[string]string{"token": "1145141919810", "next": "a.html"}) -> {"code":"1001","msg":"OK","token":"1145141919810","next":"a.html"}
-func AlertInfoJsonKVM(languageID int, massageID int, keyValue map[string]string) []byte {
-	var jsonMap map[string]string = alertInfoJsonGenMap(languageID, massageID)
-	if len(keyValue) > 0 {
-		for k, v := range keyValue {
-			jsonMap[k] = v
-		}
-	}
-	return alertInfoJsonGenJson(jsonMap)
-}
-
 //alertInfoJsonGenMap: 建立 JSON 模板的基本資訊
 //	`languageID` int 語言 ID
 //	`massageID`  int 資訊 ID
 //	return map[string]string 待生成 JSON 的字典
-func alertInfoJsonGenMap(languageID int, massageID int) map[string]string {
+func alertInfoJsonGenMap(languageID int, massageID int) map[string]interface{} {
 	var massageText string = alertInfoGet(languageID, massageID)
-	return map[string]string{
-		"code": strconv.Itoa(massageID),
+	return map[string]interface{}{
+		"code": massageID,
 		"msg":  massageText,
 	}
 }
@@ -147,7 +130,7 @@ func alertInfoJsonGenMap(languageID int, massageID int) map[string]string {
 //alertInfoJsonGenJson: 將待生成 JSON 的字典生成為 JSON 位元組
 //	`jsonMap` map[string]string 待生成 JSON 的字典
 //	return    []byte            JSON 位元組
-func alertInfoJsonGenJson(jsonMap map[string]string) []byte {
+func alertInfoJsonGenJson(jsonMap map[string]interface{}) []byte {
 	bytes, err := json.Marshal(jsonMap)
 	if err != nil {
 		return []byte{}
