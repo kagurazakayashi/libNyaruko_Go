@@ -31,6 +31,7 @@ func MD5String(data string, key string) string {
 //	`chunk` float64 分塊讀取的每塊資料量(B)。其中 0 為不分塊(整體讀入), -1 為使用預設分塊大小 4KB 。
 //	return string 雜湊之後的字串，如果失敗則返回空字串
 //	return error  可能發生的錯誤
+//	注意：小檔案讀取模式下，會從檔案當前指標位置開始讀取，計算後文件指標在末尾；大檔案讀取模式下，會將檔案指標移到開頭從頭讀取，計算後文件指標在開頭。
 func MD5FilePath(filePath string, key string, chunk float64) (string, error) {
 	return hashEncodeFilePath(5, filePath, chunk, key)
 }
@@ -38,11 +39,11 @@ func MD5FilePath(filePath string, key string, chunk float64) (string, error) {
 //MD5File: 計算小型檔案 MD5 雜湊（基於 io.Reader 檔案物件）
 //	`file` io.Reader 檔案物件
 //	`key`  string 使用 HMAC 演算法帶 Key 運算，空字串為不使用
-//	`chunk` float64 分塊讀取的每塊資料量(B)。其中 0 為不分塊(整體讀入), -1 為使用預設分塊大小 4KB 。
 //	return string 雜湊之後的字串，如果失敗則返回空字串
 //	return error  可能發生的錯誤
-func MD5File(file io.Reader, key string, chunk float64) (string, error) {
-	return hashEncodeFile(5, file, nil, chunk, key)
+//	注意：小檔案讀取模式下，會從檔案當前指標位置開始讀取，計算後文件指標在末尾
+func MD5File(file io.Reader, key string) (string, error) {
+	return hashEncodeFile(5, file, nil, 0, key)
 }
 
 //MD5FileBig: 計算大型檔案 MD5 雜湊（基於 *os.File 檔案物件）
@@ -51,6 +52,7 @@ func MD5File(file io.Reader, key string, chunk float64) (string, error) {
 //	`chunk` float64 分塊讀取的每塊資料量(B)。其中 0 為不分塊(整體讀入), -1 為使用預設分塊大小 4KB 。
 //	return string 雜湊之後的字串，如果失敗則返回空字串
 //	return error  可能發生的錯誤
+//	注意：大檔案讀取模式下(chunk!=0)，會將檔案指標移到開頭從頭讀取，計算後文件指標在開頭。
 func MD5FileBig(file *os.File, key string, chunk float64) (string, error) {
 	return hashEncodeFile(5, nil, file, chunk, key)
 }
@@ -70,6 +72,7 @@ func SHA1String(data string, key string) string {
 //	`chunk` float64 分塊讀取的每塊資料量(B)。其中 0 為不分塊(整體讀入), -1 為使用預設分塊大小 4KB 。
 //	return string 雜湊之後的字串，如果失敗則返回空字串
 //	return error  可能發生的錯誤
+//	注意：小檔案讀取模式下，會從檔案當前指標位置開始讀取，計算後文件指標在末尾；大檔案讀取模式下，會將檔案指標移到開頭從頭讀取，計算後文件指標在開頭。
 func SHA1FilePath(filePath string, key string, chunk float64) (string, error) {
 	return hashEncodeFilePath(1, filePath, chunk, key)
 }
@@ -77,11 +80,11 @@ func SHA1FilePath(filePath string, key string, chunk float64) (string, error) {
 //SHA1File: 計算小型檔案 SHA1 雜湊（基於 io.Reader 檔案物件）
 //	`file` io.Reader 檔案物件
 //	`key`  string 使用 HMAC 演算法帶 Key 運算，空字串為不使用
-//	`chunk` float64 分塊讀取的每塊資料量(B)。其中 0 為不分塊(整體讀入), -1 為使用預設分塊大小 4KB 。
 //	return string 雜湊之後的字串，如果失敗則返回空字串
 //	return error  可能發生的錯誤
-func SHA1File(file io.Reader, key string, chunk float64) (string, error) {
-	return hashEncodeFile(1, file, nil, chunk, key)
+//	注意：小檔案讀取模式下，會從檔案當前指標位置開始讀取，計算後文件指標在末尾
+func SHA1File(file io.Reader, key string) (string, error) {
+	return hashEncodeFile(1, file, nil, 0, key)
 }
 
 //SHA1FileBig: 計算大型檔案 SHA1 雜湊（基於 *os.File 檔案物件）
@@ -90,6 +93,7 @@ func SHA1File(file io.Reader, key string, chunk float64) (string, error) {
 //	`chunk` float64 分塊讀取的每塊資料量(B)。其中 0 為不分塊(整體讀入), -1 為使用預設分塊大小 4KB 。
 //	return string 雜湊之後的字串，如果失敗則返回空字串
 //	return error  可能發生的錯誤
+//	注意：大檔案讀取模式下(chunk!=0)，會將檔案指標移到開頭從頭讀取，計算後文件指標在開頭。
 func SHA1FileBig(file *os.File, key string, chunk float64) (string, error) {
 	return hashEncodeFile(1, nil, file, chunk, key)
 }
@@ -109,6 +113,7 @@ func SHA256String(data string, key string) string {
 //	`chunk` float64 分塊讀取的每塊資料量(B)。其中 0 為不分塊(整體讀入), -1 為使用預設分塊大小 4KB 。
 //	return string 雜湊之後的字串，如果失敗則返回空字串
 //	return error  可能發生的錯誤
+//	注意：小檔案讀取模式下，會從檔案當前指標位置開始讀取，計算後文件指標在末尾；大檔案讀取模式下，會將檔案指標移到開頭從頭讀取，計算後文件指標在開頭。
 func SHA256FilePath(filePath string, key string, chunk float64) (string, error) {
 	return hashEncodeFilePath(256, filePath, chunk, key)
 }
@@ -116,11 +121,11 @@ func SHA256FilePath(filePath string, key string, chunk float64) (string, error) 
 //SHA256File: 計算小型檔案 SHA256 雜湊（基於 io.Reader 檔案物件）
 //	`file` io.Reader 檔案物件
 //	`key`  string 使用 HMAC 演算法帶 Key 運算，空字串為不使用
-//	`chunk` float64 分塊讀取的每塊資料量(B)。其中 0 為不分塊(整體讀入), -1 為使用預設分塊大小 4KB 。
 //	return string 雜湊之後的字串，如果失敗則返回空字串
 //	return error  可能發生的錯誤
-func SHA256File(file io.Reader, key string, chunk float64) (string, error) {
-	return hashEncodeFile(256, file, nil, chunk, key)
+//	注意：小檔案讀取模式下，會從檔案當前指標位置開始讀取，計算後文件指標在末尾
+func SHA256File(file io.Reader, key string) (string, error) {
+	return hashEncodeFile(256, file, nil, 0, key)
 }
 
 //SHA256FileBig: 計算大型檔案 SHA256 雜湊（基於 *os.File 檔案物件）
@@ -129,6 +134,7 @@ func SHA256File(file io.Reader, key string, chunk float64) (string, error) {
 //	`chunk` float64 分塊讀取的每塊資料量(B)。其中 0 為不分塊(整體讀入), -1 為使用預設分塊大小 4KB 。
 //	return string 雜湊之後的字串，如果失敗則返回空字串
 //	return error  可能發生的錯誤
+//	注意：大檔案讀取模式下(chunk!=0)，會將檔案指標移到開頭從頭讀取，計算後文件指標在開頭。
 func SHA256FileBig(file *os.File, key string, chunk float64) (string, error) {
 	return hashEncodeFile(256, nil, file, chunk, key)
 }
@@ -148,18 +154,19 @@ func SHA512String(data string, key string) string {
 //	`chunk` float64 分塊讀取的每塊資料量(B)。其中 0 為不分塊(整體讀入), -1 為使用預設分塊大小 4KB 。
 //	return string 雜湊之後的字串，如果失敗則返回空字串
 //	return error  可能發生的錯誤
+//	注意：小檔案讀取模式下，會從檔案當前指標位置開始讀取，計算後文件指標在末尾；大檔案讀取模式下，會將檔案指標移到開頭從頭讀取，計算後文件指標在開頭。
 func SHA512FilePath(filePath string, key string, chunk float64) (string, error) {
-	return hashEncodeFilePath(5, filePath, chunk, key)
+	return hashEncodeFilePath(512, filePath, chunk, key)
 }
 
 //SHA512File: 計算小型檔案 SHA512 雜湊（基於 io.Reader 檔案物件）
 //	`file` io.Reader 檔案物件
 //	`key`  string 使用 HMAC 演算法帶 Key 運算，空字串為不使用
-//	`chunk` float64 分塊讀取的每塊資料量(B)。其中 0 為不分塊(整體讀入), -1 為使用預設分塊大小 4KB 。
 //	return string 雜湊之後的字串，如果失敗則返回空字串
 //	return error  可能發生的錯誤
-func SHA512File(file io.Reader, key string, chunk float64) (string, error) {
-	return hashEncodeFile(5, file, nil, chunk, key)
+//	注意：小檔案讀取模式下，會從檔案當前指標位置開始讀取，計算後文件指標在末尾
+func SHA512File(file io.Reader, key string) (string, error) {
+	return hashEncodeFile(512, file, nil, 0, key)
 }
 
 //SHA512FileBig: 計算大型檔案 SHA512 雜湊（基於 *os.File 檔案物件）
@@ -168,8 +175,9 @@ func SHA512File(file io.Reader, key string, chunk float64) (string, error) {
 //	`chunk` float64 分塊讀取的每塊資料量(B)。其中 0 為不分塊(整體讀入), -1 為使用預設分塊大小 4KB 。
 //	return string 雜湊之後的字串，如果失敗則返回空字串
 //	return error  可能發生的錯誤
+//	注意：大檔案讀取模式下(chunk!=0)，會將檔案指標移到開頭從頭讀取，計算後文件指標在開頭。
 func SHA512FileBig(file *os.File, key string, chunk float64) (string, error) {
-	return hashEncodeFile(5, nil, file, chunk, key)
+	return hashEncodeFile(512, nil, file, chunk, key)
 }
 
 //hashEncode: 計算雜湊編碼
@@ -178,26 +186,27 @@ func SHA512FileBig(file *os.File, key string, chunk float64) (string, error) {
 //	return string 雜湊之後的字串，如果失敗則返回空字串
 //	return error  可能發生的錯誤
 func hashEncode(mode int16, dataByte []byte, key string) (string, error) {
+	var dataByteN []byte = dataByte
 	if len(key) == 0 {
 		var h hash.Hash = hashMode(mode)()
-		_, err := h.Write(dataByte)
+		_, err := h.Write(dataByteN)
 		if err != nil {
 			return "", err
 		}
-		dataByte = []byte(nil)
-		dataByte = h.Sum(dataByte)
-		var hashStr string = fmt.Sprintf("%x", dataByte)
+		dataByteN = []byte(nil)
+		dataByteN = h.Sum(dataByteN)
+		var hashStr string = fmt.Sprintf("%x", dataByteN)
 		return hashStr, nil
 	} else { // HMAC
 		var keyByte []byte = []byte(key)
 		var hmac hash.Hash = hmac.New(hashMode(mode), keyByte)
-		_, err := hmac.Write(dataByte)
+		_, err := hmac.Write(dataByteN)
 		if err != nil {
 			return "", err
 		}
-		dataByte = []byte(nil)
-		dataByte = hmac.Sum(dataByte)
-		return hex.EncodeToString(dataByte), nil
+		dataByteN = []byte(nil)
+		dataByteN = hmac.Sum(dataByteN)
+		return hex.EncodeToString(dataByteN), nil
 	}
 }
 
@@ -230,10 +239,11 @@ func hashEncodeFilePath(mode int16, filePath string, chunk float64, key string) 
 //	`smallFile` io.Reader 小型檔案物件
 //	`bigFile`   *os.File  大型檔案物件
 //	`chunk` float64 分塊讀取的每塊資料量(B)。其中 0 為不分塊(整體讀入), -1 為使用預設分塊大小 4KB 。
-//	注意: smallFile 和 bigFile 選擇其一輸入，另一個傳 nil 。
-//	注意: 如果 chunk 為 0 , 必須使用 smallFile , 否則必須使用 bigFile 。
 //	return string 雜湊之後的字串，如果失敗則返回空字串
 //	return error  可能發生的錯誤
+//	注意: smallFile 和 bigFile 選擇其一輸入，另一個傳 nil 。
+//	注意: 如果 chunk 為 0 , 必須使用 smallFile , 否則必須使用 bigFile 。
+//	注意：大檔案讀取模式下(chunk!=0)，會將檔案指標移到開頭從頭讀取，計算後文件指標在開頭。
 func hashEncodeFile(mode int16, smallFile io.Reader, bigFile *os.File, chunk float64, key string) (string, error) {
 	if chunk == 0 && smallFile != nil {
 		return hashEncodeSmallFile(mode, smallFile, key)
@@ -269,6 +279,7 @@ func hashEncodeSmallFilePath(mode int16, filePath string, key string) (string, e
 //	`file` io.Reader 檔案物件
 //	return string 雜湊之後的字串，如果失敗則返回空字串
 //	return error  可能發生的錯誤
+//	注意：小檔案讀取模式下，會從檔案當前指標位置開始讀取，計算後文件指標在末尾
 func hashEncodeSmallFile(mode int16, file io.Reader, key string) (string, error) {
 	dataByte, err := ioutil.ReadAll(file)
 	if err != nil {
@@ -303,11 +314,13 @@ func hashEncodeBigFilePath(mode int16, filePath string, chunk float64) (string, 
 //	`file` io.Reader 檔案物件
 //	return string 雜湊之後的字串，如果失敗則返回空字串
 //	return error  可能發生的錯誤
+//	注意：大檔案讀取模式下，會將檔案指標移到開頭從頭讀取，計算後文件指標在開頭。
 func hashEncodeBigFile(mode int16, file *os.File, chunk float64) (string, error) {
 	info, err := file.Stat()
 	if err != nil {
 		return "", err
 	}
+	file.Seek(0, 0)
 	var filesize int64 = info.Size()
 	if chunk <= 0 {
 		chunk = 4096
@@ -331,9 +344,10 @@ func hashEncodeBigFile(mode int16, file *os.File, chunk float64) (string, error)
 			return "", err
 		}
 	}
+	file.Seek(0, 0)
 	var dataByte []byte = []byte(nil)
 	dataByte = h.Sum(dataByte)
-	return string(dataByte), nil
+	return hex.EncodeToString(dataByte), nil
 }
 
 //hashMode: 指定雜湊演算法
