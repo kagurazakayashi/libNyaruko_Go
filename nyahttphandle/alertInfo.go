@@ -86,6 +86,12 @@ func AlertInfoTemplateLoad(filePath string) {
 	fmt.Println(len(alertinfo))
 }
 
+//alertinfoLanguageList: 受支援的語言列表
+//	return []string 語言碼陣列
+func AlertinfoLanguageList() []string {
+	return alertinfoLanguages
+}
+
 //AlertInfoJson: 獲取可以直接用於返回客戶端的訊息 JSON 模板
 //	`languageID` int    語言 ID
 //	`massageID`  int    資訊 ID
