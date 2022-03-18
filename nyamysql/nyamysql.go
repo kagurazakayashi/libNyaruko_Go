@@ -128,7 +128,7 @@ func (p *NyaMySQL) AddRecord(table string, key string, val string, values string
 //	`where`  需要修改行的條件，例:`id`=10
 //	`Debug`  *log.Logger 指定log物件，沒有填寫nil
 //	return error
-func (p *NyaMySQL) UpdataRecord(table string, updata string, where string, Debug *log.Logger) error {
+func (p *NyaMySQL) UpdataRecord(table string, updata string, where string, Debug *log.Logger) (int64, error) {
 	var dbq string = "update `" + table + "` set " + updata
 	if where != "" {
 		dbq += " where " + where
@@ -146,13 +146,13 @@ func (p *NyaMySQL) UpdataRecord(table string, updata string, where string, Debug
 		} else {
 			log.Printf("update faied, error:[%v]", err.Error())
 		}
-		return err
+		return 0, err
 	}
 	num, _ := result.RowsAffected()
 	if Debug != nil {
 		Debug.Printf("update success, affected rows:[%d]\n", num)
 	}
-	return nil
+	return num, nil
 }
 
 //DeleteRecord: 從SQL資料庫中刪除行
