@@ -1,3 +1,4 @@
+// 測試：雜湊相關函式的工作情況
 package nyacrypt
 
 import (
@@ -9,6 +10,7 @@ func TestMain(m *testing.M) {
 	m.Run()
 }
 
+//TestString: 字串雜湊測試
 func TestString(t *testing.T) {
 	println("===== String Test =====")
 	var s string = "Hello, World!"
@@ -25,10 +27,16 @@ func TestString(t *testing.T) {
 	println("SHA512String-HMAC", SHA512String(s, k))
 }
 
+//TestFile: 檔案雜湊測試
 func TestFile(t *testing.T) {
 	println("===== File Test =====")
 	var path string = "hash_test.go"
 	println("path", path)
+	file, err := os.Open(path)
+	if err != nil {
+		println(err.Error())
+		return
+	}
 
 	println("MD5FilePath")
 	str, err := MD5FilePath(path, "", -1)
@@ -62,54 +70,37 @@ func TestFile(t *testing.T) {
 		println(str)
 	}
 
-	file, err := os.Open(path)
-
 	println("MD5FileBig")
+	str, err = MD5FileBig(file, "", -1)
 	if err != nil {
 		println(err.Error())
 	} else {
-		str, err = MD5FileBig(file, "", -1)
-		if err != nil {
-			println(err.Error())
-		} else {
-			println(str)
-		}
+		println(str)
 	}
 
 	println("SHA1FileBig")
+	str, err = SHA1FileBig(file, "", -1)
 	if err != nil {
 		println(err.Error())
 	} else {
-		str, err = SHA1FileBig(file, "", -1)
-		if err != nil {
-			println(err.Error())
-		} else {
-			println(str)
-		}
+		println(str)
 	}
 
 	println("SHA256FileBig")
+	str, err = SHA256FileBig(file, "", -1)
 	if err != nil {
 		println(err.Error())
 	} else {
-		str, err = SHA256FileBig(file, "", -1)
-		if err != nil {
-			println(err.Error())
-		} else {
-			println(str)
-		}
+		println(str)
 	}
 
 	println("SHA512FileBig")
+	str, err = SHA512FileBig(file, "", -1)
 	if err != nil {
 		println(err.Error())
 	} else {
-		str, err = SHA512FileBig(file, "", -1)
-		if err != nil {
-			println(err.Error())
-		} else {
-			println(str)
-		}
+		println(str)
 	}
+
 	file.Close()
 }
