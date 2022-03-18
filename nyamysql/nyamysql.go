@@ -127,7 +127,7 @@ func (p *NyaMySQL) AddRecord(table string, key string, val string, values string
 //	`updata` 需要修改的值，需要以,分割，例:`name`="aa",`age`=10
 //	`where`  需要修改行的條件，例:`id`=10
 //	`Debug`  *log.Logger 指定log物件，沒有填寫nil
-//	return error
+//	return int64 和 error，返回更新的行数
 func (p *NyaMySQL) UpdataRecord(table string, updata string, where string, Debug *log.Logger) (int64, error) {
 	var dbq string = "update `" + table + "` set " + updata
 	if where != "" {
