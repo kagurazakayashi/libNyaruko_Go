@@ -5,8 +5,10 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/binary"
 	"fmt"
+	"io/ioutil"
 	"net/url"
 	"strconv"
 	"time"
@@ -71,7 +73,7 @@ func Option_isErrorStop(v bool) OptionConfig {
 //	 1 已連線
 //	 2 將要連線
 //	return   error 可能遇到的錯誤
-type NyaMQTTStatusHandler func(status int8, err error)
+type NyaMQTTStatusHandler func(client string, status int8, err error)
 
 func (p *NyaMQTT) SetNyaMQTTStatusHandler(handler NyaMQTTStatusHandler) {
 	p.statusHandler = handler
@@ -80,7 +82,7 @@ func (p *NyaMQTT) SetNyaMQTTStatusHandler(handler NyaMQTTStatusHandler) {
 //NyaMQTTSMessageHandler: MQTT 收到新訊息時觸發
 //	`topic`   string 主題名稱
 //	`message` string 收到的訊息文字收到的訊息文字
-type NyaMQTTSMessageHandler func(topic string, message string)
+type NyaMQTTSMessageHandler func(client string, topic string, message string)
 
 func (p *NyaMQTT) SetNyaMQTTSMessageHandler(handler NyaMQTTSMessageHandler) {
 	p.messageHandler = handler
@@ -144,9 +146,43 @@ func New(configJsonString string, statusHandler NyaMQTTStatusHandler, messageHan
 	if redisQOS.Exists() {
 		retained = redisRetained.Int() != 0
 	}
+	var certExists [3]bool = [3]bool{false, false, false}
+	configKey = "mqtt_cert_clentca"
+	var redisClentCA gjson.Result = gjson.Get(configJsonString, configKey)
+	var certClentCA string = ""
+	if redisClentCA.Exists() {
+		certClentCA = redisClentCA.String()
+		certExists[0] = true
+	}
+	configKey = "mqtt_cert_clent"
+	var redisClent gjson.Result = gjson.Get(configJsonString, configKey)
+	var certClient string = ""
+	if redisClent.Exists() {
+		certClient = redisClent.String()
+		certExists[1] = true
+	}
+	configKey = "mqtt_cert_clentkey"
+	var redisClentKey gjson.Result = gjson.Get(configJsonString, configKey)
+	var certClentkey string = ""
+	if redisClentKey.Exists() {
+		certClentkey = redisClentKey.String()
+		certExists[2] = true
+	}
 
+	var urlProtocol string = "tcp"
 	var opts *mqtt.ClientOptions = mqtt.NewClientOptions()
-	var uri string = "tcp://" + broker + ":" + port
+	if certExists[0] {
+		urlProtocol = "ssl"
+		if certExists[1] && certExists[2] {
+			var tlsconf *tls.Config = tlsConfig(certClentCA, certClient, certClentkey)
+			opts.SetTLSConfig(tlsconf)
+		} else {
+			var tlsconf *tls.Config = tlsConfigWithCA(certClentCA)
+			opts.SetTLSConfig(tlsconf)
+		}
+	}
+
+	var uri string = urlProtocol + "://" + broker + ":" + port
 	opts.AddBroker(uri)
 	opts.SetClientID(clientid)
 	if len(user) > 0 {
@@ -158,37 +194,41 @@ func New(configJsonString string, statusHandler NyaMQTTStatusHandler, messageHan
 
 	var nyamqttobj NyaMQTT = NyaMQTT{statusHandler: statusHandler, messageHandler: messageHandler}
 	nyamqttobj.hMessage = func(client mqtt.Client, msg mqtt.Message) {
+		cro := client.OptionsReader()
 		var message string = string(msg.Payload())
 		if nyamqttobj.statusHandler != nil {
-			nyamqttobj.messageHandler(msg.Topic(), message)
+			nyamqttobj.messageHandler(cro.ClientID(), msg.Topic(), message)
 		}
 	}
 	opts.SetDefaultPublishHandler(nyamqttobj.hMessage)
 	nyamqttobj.hConnect = func(client mqtt.Client) {
+		cro := client.OptionsReader()
 		if nyamqttobj.statusHandler != nil {
-			nyamqttobj.statusHandler(1, nil)
+			nyamqttobj.statusHandler(cro.ClientID(), 1, nil)
 		}
 	}
 	opts.OnConnect = nyamqttobj.hConnect
 
 	nyamqttobj.hConnectAttempt = func(broker *url.URL, tlsCfg *tls.Config) *tls.Config {
 		if nyamqttobj.statusHandler != nil {
-			nyamqttobj.statusHandler(2, nil)
+			nyamqttobj.statusHandler("", 2, nil)
 		}
 		return tlsCfg
 	}
 	opts.OnConnectAttempt = nyamqttobj.hConnectAttempt
 
 	nyamqttobj.hConnectionLost = func(client mqtt.Client, err error) {
+		cro := client.OptionsReader()
 		if nyamqttobj.statusHandler != nil {
-			nyamqttobj.statusHandler(-1, nil)
+			nyamqttobj.statusHandler(cro.ClientID(), -1, nil)
 		}
 	}
 	opts.OnConnectionLost = nyamqttobj.hConnectionLost
 
 	nyamqttobj.hReconnecting = func(c mqtt.Client, co *mqtt.ClientOptions) {
+		cro := c.OptionsReader()
 		if nyamqttobj.statusHandler != nil {
-			nyamqttobj.statusHandler(-2, nil)
+			nyamqttobj.statusHandler(cro.ClientID(), -2, nil)
 		}
 	}
 	opts.OnReconnecting = nyamqttobj.hReconnecting
@@ -211,6 +251,41 @@ func loadConfig(confCMap cmap.ConcurrentMap, key string) (string, error) {
 		return "", fmt.Errorf("no config : " + key)
 	}
 	return val.(string), nil
+}
+
+// 建立證書配置（自簽證書）
+func tlsConfig(caCert string, clientCert string, clientKey string) *tls.Config {
+	certpool := x509.NewCertPool()
+	ca, err := ioutil.ReadFile(caCert)
+	if err != nil {
+		fmt.Println("加密证书故障", err.Error())
+	}
+	certpool.AppendCertsFromPEM(ca)
+	// Import client certificate/key pair
+	clientKeyPair, err := tls.LoadX509KeyPair(clientCert, clientKey)
+	if err != nil {
+		fmt.Println("加密证书故障", err.Error())
+	}
+	return &tls.Config{
+		RootCAs:            certpool,
+		ClientAuth:         tls.NoClientCert,
+		ClientCAs:          nil,
+		InsecureSkipVerify: true,
+		Certificates:       []tls.Certificate{clientKeyPair},
+	}
+}
+
+// 建立證書配置（CA證書）
+func tlsConfigWithCA(caCert string) *tls.Config {
+	certpool := x509.NewCertPool()
+	ca, err := ioutil.ReadFile(caCert)
+	if err != nil {
+		fmt.Println("加密证书故障", err.Error())
+	}
+	certpool.AppendCertsFromPEM(ca)
+	return &tls.Config{
+		RootCAs: certpool,
+	}
 }
 
 //IntToBytes: 將 int 轉換為 Bytes
