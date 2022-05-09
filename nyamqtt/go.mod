@@ -1,6 +1,6 @@
 module github.com/kagurazakayashi/libNyaruko_Go/nyamqtt
 
-go 1.17
+go 1.18
 
 require (
 	github.com/eclipse/paho.mqtt.golang v1.3.5
