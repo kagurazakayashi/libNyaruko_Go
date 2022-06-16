@@ -4,6 +4,7 @@ package nyamysql
 import (
 	"database/sql"
 	"fmt"
+	"regexp"
 
 	"github.com/tidwall/gjson"
 )
@@ -99,4 +100,27 @@ func (p *NyaMySQL) Close() {
 		p.db.Close()
 		p.db = nil
 	}
+}
+
+//正则过滤sql注入的方法
+//	text	string		要匹配的语句
+//	key		string		如果出错需要返回的 前端传入的key，例：username,password
+//	Error	*log.Logger	指定log对象，没有填写nil
+//	t		string		token或语言代码
+//	return	int			""：正常；其他：错误返回信息或错误代码
+func SQLScurity(text string) string {
+	//过滤 ‘
+	//ORACLE 注解 --  /**/
+	//关键字过滤 update ,delete
+	// 正则的字符串, 不能用 " " 因为" "里面的内容会转义
+	str := `(?:')|(?:--)|(/\\*(?:.|[\\n\\r])*?\\*/)|(\b(select|update|and|or|delete|insert|trancate|char|chr|into|substr|ascii|declare|exec|count|master|into|drop|execute)\b)`
+	reint := ""
+	re, err := regexp.Compile(str)
+	if err != nil {
+		return err.Error()
+	}
+	if re.MatchString(text) {
+		reint = "21001"
+	}
+	return reint
 }
