@@ -115,7 +115,7 @@ func AlertInfoJson(w http.ResponseWriter, languageID int, massageID int) []byte 
 //	示例：配置檔案第一行為 `id,en,chs`, 第二行為 `200,OK,成功` 時：
 //	AlertInfoJsonKV(1, 200, "token", "1145141919810") -> {"code":"1001","msg":"OK","token":"1145141919810"}
 func AlertInfoJsonKV(w http.ResponseWriter, languageID int, massageID int, key string, value interface{}) []byte {
-	code, jsonMap := alertInfoJsonGenMap(languageID, massageID)
+	code, jsonMap := AlertInfoJsonGenMap(languageID, massageID)
 	if value != "" {
 		if key == "" {
 			jsonMap["data"] = value
@@ -132,8 +132,8 @@ func AlertInfoJsonKV(w http.ResponseWriter, languageID int, massageID int, key s
 //	`languageID` int 語言 ID
 //	`massageID`  int 資訊 ID
 //	return map[string]string 待生成 JSON 的字典
-func alertInfoJsonGenMap(languageID int, massageID int) (int, map[string]interface{}) {
-	code, massageText := alertInfoGet(languageID, massageID)
+func AlertInfoJsonGenMap(languageID int, massageID int) (int, map[string]interface{}) {
+	code, massageText := AlertInfoGet(languageID, massageID)
 	return code, map[string]interface{}{
 		"code": massageID,
 		"msg":  massageText,
@@ -159,7 +159,7 @@ func alertInfoJsonGenJson(jsonMap map[string]interface{}) []byte {
 //	return       string 取出的文字
 //	示例：配置檔案第一行為 `id,code,en,chs`, 第二行為 `200,OK,成功` 時：
 //	alertInfoGet(1, 200) -> "OK"
-func alertInfoGet(languageID int, massageID int) (int, string) {
+func AlertInfoGet(languageID int, massageID int) (int, string) {
 	if len(alertinfo) == 0 || languageID >= alertinfoLanguageLen || massageID > alertinfoMaxID {
 		return 400, ""
 	}
