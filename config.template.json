@@ -16,5 +16,8 @@
     "mqtt_user": "mqttusername",
     "mqtt_pwd": "mqttpassword",
     "mqtt_qos": "0",
-    "mqtt_retained": "0"
+    "mqtt_retained": "0",
+    "mqtt_cert_clentca":"./ca/ca.crt",
+    "mqtt_cert_clent":"./ca/client.crt",
+    "mqtt_cert_clentkey":"./ca/client.key"
 }
