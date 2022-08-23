@@ -25,7 +25,8 @@ var alertinfoLanguages []string = []string{} // 語言碼列表
 var alertinfoLanguageLen int = 0             // 支援的語言數量
 var alertinfoMaxID int = 0                   // 最大碼值
 
-//alertInfoTemplateLoad 載入語言配置檔案（请先执行该函数再继续使用 AlertInfoJson(KV)(M) ）
+// alertInfoTemplateLoad 載入語言配置檔案（请先执行该函数再继续使用 AlertInfoJson(KV)(M) ）
+//
 //	`filePath` string 語言配置檔案(csv)路徑
 //	資料儲存到 alertinfo ，無需重複載入
 func AlertInfoTemplateLoad(filePath string) {
@@ -86,13 +87,15 @@ func AlertInfoTemplateLoad(filePath string) {
 	fmt.Println(len(alertinfo))
 }
 
-//alertinfoLanguageList: 受支援的語言列表
+// alertinfoLanguageList: 受支援的語言列表
+//
 //	return []string 語言碼陣列
 func AlertinfoLanguageList() []string {
 	return alertinfoLanguages
 }
 
-//AlertInfoJson: 獲取可以直接用於返回客戶端的訊息 JSON 模板
+// AlertInfoJson: 獲取可以直接用於返回客戶端的訊息 JSON 模板
+//
 //	`languageID` int    語言 ID
 //	`massageID`  int    資訊 ID
 //	return       string 取出的文字
@@ -102,7 +105,8 @@ func AlertInfoJson(w http.ResponseWriter, languageID int, massageID int) []byte 
 	return AlertInfoJsonKV(w, languageID, massageID, "", "")
 }
 
-//AlertInfoJsonKV: 獲取可以直接用於返回客戶端的訊息 JSON 模板，並可以附帶一個自定義鍵值
+// AlertInfoJsonKV: 獲取可以直接用於返回客戶端的訊息 JSON 模板，並可以附帶一個自定義鍵值
+//
 //	`languageID` int    語言 ID
 //	`massageID`  int    資訊 ID
 //	`key`        string 自定義鍵
@@ -123,7 +127,8 @@ func AlertInfoJsonKV(w http.ResponseWriter, languageID int, massageID int, key s
 	return alertInfoJsonGenJson(jsonMap)
 }
 
-//alertInfoJsonGenMap: 建立 JSON 模板的基本資訊
+// AlertInfoJsonGenMap: 建立 JSON 模板的基本資訊
+//
 //	`languageID` int 語言 ID
 //	`massageID`  int 資訊 ID
 //	return map[string]string 待生成 JSON 的字典
@@ -135,7 +140,8 @@ func alertInfoJsonGenMap(languageID int, massageID int) (int, map[string]interfa
 	}
 }
 
-//alertInfoJsonGenJson: 將待生成 JSON 的字典生成為 JSON 位元組
+// alertInfoJsonGenJson: 將待生成 JSON 的字典生成為 JSON 位元組
+//
 //	`jsonMap` map[string]string 待生成 JSON 的字典
 //	return    []byte            JSON 位元組
 func alertInfoJsonGenJson(jsonMap map[string]interface{}) []byte {
@@ -146,7 +152,8 @@ func alertInfoJsonGenJson(jsonMap map[string]interface{}) []byte {
 	return bytes
 }
 
-//alertInfoGet: 取出資訊文本
+// alertInfoGet: 取出資訊文本
+//
 //	`languageID` int    語言 ID
 //	`massageID`  int    資訊 ID
 //	return       string 取出的文字
@@ -164,7 +171,8 @@ func alertInfoGet(languageID int, massageID int) (int, string) {
 	return code, alertinfo[languageID][massageID]
 }
 
-//alertInfoSub: 識別雙引號轉義
+// alertInfoSub: 識別雙引號轉義
+//
 //	`line` string   CSV 單行字串
 //	return []string 本行中每列的文字資料
 //	示例: 100,"Hello, ""World""!","你好，“世界”！"
