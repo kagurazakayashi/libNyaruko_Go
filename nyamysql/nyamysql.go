@@ -2,15 +2,58 @@
 package nyamysql
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
-	cmap "github.com/orcaman/concurrent-map"
+	cmap "github.com/orcaman/concurrent-map/v2"
 )
 
-//QueryData: 從SQL資料庫中查詢
+// QueryDataCMD: 從SQL資料庫中查詢
+//
+//	所有關鍵字除*以外需要用``包裹
+//	`sql`	string		mysql语句
+//	`Debug`	*log.Logger	指定log物件，沒有填寫nil
+//	return cmap.ConcurrentMap 和 error 物件，結構為：
+//	{
+//	    "0":{"id":1,"name":"1"},
+//	    "1":{"id":2,"name":"2"}
+//	}
+func (p *NyaMySQL) QueryDataCMD(sql string, Debug *log.Logger) (cmap.ConcurrentMap[cmap.ConcurrentMap[string]], error) {
+	sqls := strings.Split(sql, ";")
+	for i, v := range sqls {
+		if Debug != nil {
+			Debug.Println("\n" + v)
+		} else {
+			fmt.Println("[QueryData]", v)
+		}
+		if i+1 == len(sqls) {
+			query, err := p.db.Query(v)
+			if err != nil {
+				if Debug != nil {
+					Debug.Printf("query faied, error:[%v]", err.Error())
+				}
+				return cmap.New[cmap.ConcurrentMap[string]](), err
+			}
+			return handleQD(query, Debug)
+		} else {
+			_, err := p.db.Exec(v)
+			if err != nil {
+				if Debug != nil {
+					Debug.Printf("query faied, error:[%v]", err.Error())
+				}
+				return cmap.New[cmap.ConcurrentMap[string]](), err
+			}
+		}
+	}
+	return cmap.New[cmap.ConcurrentMap[string]](), fmt.Errorf("query is null")
+}
+
+// QueryData: 從SQL資料庫中查詢
+//
 //	所有關鍵字除*以外需要用``包裹
 //	`sqldb`   string      mysql資料庫名，使用預設值只需填寫""
 //	`recn`    string      查詢語句的返回。全部：*，指定：`id`
@@ -24,7 +67,7 @@ import (
 //	    "0":{"id":1,"name":"1"},
 //	    "1":{"id":2,"name":"2"}
 //	}
-func (p *NyaMySQL) QueryData(recn string, table string, where string, orderby string, limit string, Debug *log.Logger) (cmap.ConcurrentMap, error) {
+func (p *NyaMySQL) QueryData(recn string, table string, where string, orderby string, limit string, Debug *log.Logger) (cmap.ConcurrentMap[cmap.ConcurrentMap[string]], error) {
 	var dbq string = "select " + recn + " from `" + table + "`"
 	if where != "" {
 		dbq += " where " + where
@@ -45,9 +88,12 @@ func (p *NyaMySQL) QueryData(recn string, table string, where string, orderby st
 		if Debug != nil {
 			Debug.Printf("query faied, error:[%v]", err.Error())
 		}
-		return cmap.New(), err
+		return cmap.New[cmap.ConcurrentMap[string]](), err
 	}
+	return handleQD(query, Debug)
+}
 
+func handleQD(query *sql.Rows, Debug *log.Logger) (cmap.ConcurrentMap[cmap.ConcurrentMap[string]], error) {
 	//读出查询出的列字段名
 	cols, _ := query.Columns()
 	//values是每个列的值，这里获取到byte里
@@ -60,16 +106,16 @@ func (p *NyaMySQL) QueryData(recn string, table string, where string, orderby st
 	}
 
 	//最后得到的map
-	results := cmap.New()
+	results := cmap.New[cmap.ConcurrentMap[string]]()
 	i := 0
 	for query.Next() { //循环，让游标往下推
 		if err := query.Scan(scans...); err != nil { //query.Scan查询出来的不定长值放到scans[i] = &values[i],也就是每行都放在values里
 			if Debug != nil {
 				Debug.Println(err)
 			}
-			return cmap.New(), err
+			return cmap.New[cmap.ConcurrentMap[string]](), err
 		}
-		row := cmap.New()          //每行数据
+		row := cmap.New[string]()  //每行数据
 		for k, v := range values { //每行数据是放在values里面，现在把它挪到row里
 			key := cols[k]
 			row.Set(key, string(v))
@@ -85,7 +131,8 @@ func (p *NyaMySQL) QueryData(recn string, table string, where string, orderby st
 	return results, nil
 }
 
-//AddRecord: 向SQL資料庫中新增
+// AddRecord: 向SQL資料庫中新增
+//
 //	所有關鍵字除*以外需要用``包裹
 //	`sqldb`  string      mysql資料庫名，使用預設值只需填寫""
 //	`table`  string      從哪個表中查詢不需要``包裹
@@ -120,7 +167,8 @@ func (p *NyaMySQL) AddRecord(table string, key string, val string, values string
 	return id, nil
 }
 
-//UpdataRecord: 從SQL資料庫中修改指定的值
+// UpdataRecord: 從SQL資料庫中修改指定的值
+//
 //	所有關鍵字除*以外需要用``包裹
 //	`sqldb`  string mysql資料庫名，使用預設值只需填寫""
 //	`table`  從哪個表中查詢不需要``包裹
@@ -155,7 +203,8 @@ func (p *NyaMySQL) UpdataRecord(table string, updata string, where string, Debug
 	return num, nil
 }
 
-//DeleteRecord: 從SQL資料庫中刪除行
+// DeleteRecord: 從SQL資料庫中刪除行
+//
 //	所有關鍵字除*以外需要用``包裹
 //	`sqldb`   string mysql資料庫名，使用預設值只需填寫""
 //	`table`   string 從哪個表中查詢不需要``包裹
@@ -195,7 +244,8 @@ func (p *NyaMySQL) DeleteRecord(table string, key string, value string, and stri
 	return nil
 }
 
-//從 SQL 資料庫無主鍵表中刪除行
+// 從 SQL 資料庫無主鍵表中刪除行
+//
 //	所有關鍵字除*以外需要用``包裹
 //	`sqldb`  string     MySQL 資料庫名，使用預設值只需填寫 ""
 //	`table`  string     從哪個表中查詢不需要``包裹
@@ -241,7 +291,8 @@ func (p *NyaMySQL) DeleteRecordNoPK(table string, keys []string, values [][]stri
 	return nil
 }
 
-//FreequeryData: 從SQL資料庫中尋找
+// FreequeryData: 從SQL資料庫中尋找
+//
 //	所有關鍵字除*以外需要用``包裹
 //	`sqldb`  string      MySQL 資料庫名，使用預設值只需填寫 ""
 //	`sqlstr` string      需要執行的SQL語句
@@ -251,7 +302,7 @@ func (p *NyaMySQL) DeleteRecordNoPK(table string, keys []string, values [][]stri
 //	    "0":{"id":1,"name":"1"},
 //	    "1":{"id":2,"name":"2"}
 //	}
-func (p *NyaMySQL) FreequeryData(sqlstr string, Debug *log.Logger) (cmap.ConcurrentMap, error) {
+func (p *NyaMySQL) FreequeryData(sqlstr string, Debug *log.Logger) (cmap.ConcurrentMap[cmap.ConcurrentMap[string]], error) {
 	if Debug != nil {
 		Debug.Println("\n" + sqlstr)
 	} else {
@@ -262,7 +313,7 @@ func (p *NyaMySQL) FreequeryData(sqlstr string, Debug *log.Logger) (cmap.Concurr
 		if Debug != nil {
 			Debug.Printf("query faied, error:[%v]", err.Error())
 		}
-		return cmap.New(), err
+		return cmap.New[cmap.ConcurrentMap[string]](), err
 	}
 
 	//读出查询出的列字段名
@@ -277,16 +328,16 @@ func (p *NyaMySQL) FreequeryData(sqlstr string, Debug *log.Logger) (cmap.Concurr
 	}
 
 	//最后得到的map
-	results := cmap.New()
+	results := cmap.New[cmap.ConcurrentMap[string]]()
 	i := 0
 	for query.Next() { //循环，让游标往下推
 		if err := query.Scan(scans...); err != nil { //query.Scan查询出来的不定长值放到scans[i] = &values[i],也就是每行都放在values里
 			if Debug != nil {
 				Debug.Println(err)
 			}
-			return cmap.New(), err
+			return cmap.New[cmap.ConcurrentMap[string]](), err
 		}
-		row := cmap.New()          //每行数据
+		row := cmap.New[string]()  //每行数据
 		for k, v := range values { //每行数据是放在values里面，现在把它挪到row里
 			key := cols[k]
 			row.Set(key, string(v))
