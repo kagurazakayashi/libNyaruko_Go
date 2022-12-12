@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
-	cmap "github.com/orcaman/concurrent-map/v2"
 )
 
 // QueryDataCMD: 從SQL資料庫中查詢
@@ -22,7 +21,7 @@ import (
 //	    "0":{"id":1,"name":"1"},
 //	    "1":{"id":2,"name":"2"}
 //	}
-func (p *NyaMySQL) QueryDataCMD(sql string, Debug *log.Logger) (cmap.ConcurrentMap[cmap.ConcurrentMap[string]], error) {
+func (p *NyaMySQL) QueryDataCMD(sql string, Debug *log.Logger) (map[string]map[string]string, error) {
 	sqls := strings.Split(sql, ";")
 	for i, v := range sqls {
 		if Debug != nil {
@@ -36,7 +35,7 @@ func (p *NyaMySQL) QueryDataCMD(sql string, Debug *log.Logger) (cmap.ConcurrentM
 				if Debug != nil {
 					Debug.Printf("query faied, error:[%v]", err.Error())
 				}
-				return cmap.New[cmap.ConcurrentMap[string]](), err
+				return map[string]map[string]string{}, err
 			}
 			return handleQD(query, Debug)
 		} else {
@@ -45,11 +44,11 @@ func (p *NyaMySQL) QueryDataCMD(sql string, Debug *log.Logger) (cmap.ConcurrentM
 				if Debug != nil {
 					Debug.Printf("query faied, error:[%v]", err.Error())
 				}
-				return cmap.New[cmap.ConcurrentMap[string]](), err
+				return map[string]map[string]string{}, err
 			}
 		}
 	}
-	return cmap.New[cmap.ConcurrentMap[string]](), fmt.Errorf("query is null")
+	return map[string]map[string]string{}, fmt.Errorf("query is null")
 }
 
 // QueryData: 從SQL資料庫中查詢
@@ -67,7 +66,7 @@ func (p *NyaMySQL) QueryDataCMD(sql string, Debug *log.Logger) (cmap.ConcurrentM
 //	    "0":{"id":1,"name":"1"},
 //	    "1":{"id":2,"name":"2"}
 //	}
-func (p *NyaMySQL) QueryData(recn string, table string, where string, orderby string, limit string, Debug *log.Logger) (cmap.ConcurrentMap[cmap.ConcurrentMap[string]], error) {
+func (p *NyaMySQL) QueryData(recn string, table string, where string, orderby string, limit string, Debug *log.Logger) (map[string]map[string]string, error) {
 	var dbq string = "select " + recn + " from `" + table + "`"
 	if where != "" {
 		dbq += " where " + where
@@ -88,12 +87,12 @@ func (p *NyaMySQL) QueryData(recn string, table string, where string, orderby st
 		if Debug != nil {
 			Debug.Printf("query faied, error:[%v]", err.Error())
 		}
-		return cmap.New[cmap.ConcurrentMap[string]](), err
+		return map[string]map[string]string{}, err
 	}
 	return handleQD(query, Debug)
 }
 
-func handleQD(query *sql.Rows, Debug *log.Logger) (cmap.ConcurrentMap[cmap.ConcurrentMap[string]], error) {
+func handleQD(query *sql.Rows, Debug *log.Logger) (map[string]map[string]string, error) {
 	//读出查询出的列字段名
 	cols, _ := query.Columns()
 	//values是每个列的值，这里获取到byte里
@@ -106,21 +105,21 @@ func handleQD(query *sql.Rows, Debug *log.Logger) (cmap.ConcurrentMap[cmap.Concu
 	}
 
 	//最后得到的map
-	results := cmap.New[cmap.ConcurrentMap[string]]()
+	results := map[string]map[string]string{}
 	i := 0
 	for query.Next() { //循环，让游标往下推
 		if err := query.Scan(scans...); err != nil { //query.Scan查询出来的不定长值放到scans[i] = &values[i],也就是每行都放在values里
 			if Debug != nil {
 				Debug.Println(err)
 			}
-			return cmap.New[cmap.ConcurrentMap[string]](), err
+			return map[string]map[string]string{}, err
 		}
-		row := cmap.New[string]()  //每行数据
+		row := map[string]string{} //每行数据
 		for k, v := range values { //每行数据是放在values里面，现在把它挪到row里
 			key := cols[k]
-			row.Set(key, string(v))
+			row[key] = string(v)
 		}
-		results.Set(strconv.Itoa(i), row) //装入结果集中
+		results[strconv.Itoa(i)] = row //装入结果集中
 		i++
 	}
 
@@ -302,7 +301,7 @@ func (p *NyaMySQL) DeleteRecordNoPK(table string, keys []string, values [][]stri
 //	    "0":{"id":1,"name":"1"},
 //	    "1":{"id":2,"name":"2"}
 //	}
-func (p *NyaMySQL) FreequeryData(sqlstr string, Debug *log.Logger) (cmap.ConcurrentMap[cmap.ConcurrentMap[string]], error) {
+func (p *NyaMySQL) FreequeryData(sqlstr string, Debug *log.Logger) (map[string]map[string]string, error) {
 	if Debug != nil {
 		Debug.Println("\n" + sqlstr)
 	} else {
@@ -313,7 +312,7 @@ func (p *NyaMySQL) FreequeryData(sqlstr string, Debug *log.Logger) (cmap.Concurr
 		if Debug != nil {
 			Debug.Printf("query faied, error:[%v]", err.Error())
 		}
-		return cmap.New[cmap.ConcurrentMap[string]](), err
+		return map[string]map[string]string{}, err
 	}
 
 	//读出查询出的列字段名
@@ -328,21 +327,21 @@ func (p *NyaMySQL) FreequeryData(sqlstr string, Debug *log.Logger) (cmap.Concurr
 	}
 
 	//最后得到的map
-	results := cmap.New[cmap.ConcurrentMap[string]]()
+	results := map[string]map[string]string{}
 	i := 0
 	for query.Next() { //循环，让游标往下推
 		if err := query.Scan(scans...); err != nil { //query.Scan查询出来的不定长值放到scans[i] = &values[i],也就是每行都放在values里
 			if Debug != nil {
 				Debug.Println(err)
 			}
-			return cmap.New[cmap.ConcurrentMap[string]](), err
+			return map[string]map[string]string{}, err
 		}
-		row := cmap.New[string]()  //每行数据
+		row := map[string]string{} //每行数据
 		for k, v := range values { //每行数据是放在values里面，现在把它挪到row里
 			key := cols[k]
-			row.Set(key, string(v))
+			row[key] = string(v)
 		}
-		results.Set(strconv.Itoa(i), row) //装入结果集中
+		results[strconv.Itoa(i)] = row //装入结果集中
 		i++
 	}
 
