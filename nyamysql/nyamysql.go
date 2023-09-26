@@ -207,17 +207,18 @@ func (p *NyaMySQL) UpdataRecord(table string, updata string, where string, Debug
 // DeleteRecord: 從SQL資料庫中刪除行
 //
 //	所有關鍵字除*以外需要用``包裹
-//	`sqldb`   string mysql資料庫名，使用預設值只需填寫""
-//	`table`   string 從哪個表中查詢不需要``包裹
-//	`key`     string 根據哪個關鍵字刪除
-//	`value`   string 關鍵字對應的值
-//	`and`     string 刪除條件的附加條件會在語句末尾新增。可以寫入 and 或 or 或其他邏輯關鍵字以新增多個判斷條件
-//	`wherein` string 以where xx in (wherein)的方式刪除。wherein不為""時value無效，and 仍然有效
-//	`Debug`   *log.Logger 指定log物件，沒有填寫nil
-//	return    error
-func (p *NyaMySQL) DeleteRecord(table string, key string, value string, and string, wherein string, Debug *log.Logger) error {
+//	`sqldb`		string		mysql資料庫名，使用預設值只需填寫""
+//	`table`		string		從哪個表中查詢不需要``包裹
+//	`key`		string		根據哪個關鍵字刪除
+//	`value`		string		關鍵字對應的值
+//	`and`		string		刪除條件的附加條件會在語句末尾新增。可以寫入 and 或 or 或其他邏輯關鍵字以新增多個判斷條件
+//	`wherein`	string		以where xx in (wherein)的方式刪除。wherein不為""時value無效，and 仍然有效
+//	`Debug`		*log.Logger	指定log物件，沒有填寫nil
+//	return		int64		刪除的行数
+//	return		error		錯誤
+func (p *NyaMySQL) DeleteRecord(table string, key string, value string, and string, wherein string, Debug *log.Logger) (int64, error) {
 	if value == "" && wherein == "" {
-		return fmt.Errorf("删除语句条件不能为空")
+		return 0, fmt.Errorf("删除语句条件不能为空")
 	}
 	var dbq string = "delete from `" + table + "` where `"
 	if wherein == "" {
@@ -236,13 +237,13 @@ func (p *NyaMySQL) DeleteRecord(table string, key string, value string, and stri
 		if Debug != nil {
 			Debug.Printf("delete faied, error:[%v]", err.Error())
 		}
-		return err
+		return 0, err
 	}
 	num, _ := result.RowsAffected()
 	if Debug != nil {
 		Debug.Printf("delete success, affected rows:[%d]\n", num)
 	}
-	return nil
+	return num, nil
 }
 
 // 從 SQL 資料庫無主鍵表中刪除行
