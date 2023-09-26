@@ -76,6 +76,8 @@ func (p *NyaMySQL) QueryData(recn string, table string, where string, orderby st
 	}
 	if limit != "" {
 		dbq += " limit " + limit
+	} else {
+		dbq += " limit " + p.limit
 	}
 	if Debug != nil {
 		Debug.Println("\n" + dbq)

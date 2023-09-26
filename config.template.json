@@ -4,6 +4,7 @@
     "mysql_db": "testdb",
     "mysql_user": "mysqlusername",
     "mysql_pwd": "mysqlpassword",
+    "mysql_limit": "100",
     "sqlite_ver": "sqlite3",
     "sqlite_file": "./data.db",
     "redis_addr": "127.0.0.1",
