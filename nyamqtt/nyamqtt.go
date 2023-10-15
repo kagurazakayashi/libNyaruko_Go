@@ -8,8 +8,8 @@ import (
 	"crypto/x509"
 	"encoding/binary"
 	"fmt"
-	"io/ioutil"
 	"net/url"
+	"os"
 	"strconv"
 	"time"
 
@@ -23,6 +23,9 @@ var ctx = context.Background()
 
 type NyaMQTT NyaMQTTT
 type NyaMQTTT struct {
+	SubscribeTopics []string // 已訂閱的主題列表
+	AutoReconnect   int      // 是否自動重新連線(毫秒等待時間，-1為禁用)
+
 	db              mqtt.Client
 	err             error
 	statusHandler   NyaMQTTStatusHandler
@@ -34,7 +37,6 @@ type NyaMQTTT struct {
 	hMessage        mqtt.MessageHandler
 	defaultQOS      byte
 	defaultRetained bool
-	SubscribeTopics []string
 }
 
 // </類>
@@ -225,6 +227,15 @@ func New(configJsonString string, statusHandler NyaMQTTStatusHandler, messageHan
 		cro := client.OptionsReader()
 		if nyamqttobj.statusHandler != nil {
 			nyamqttobj.statusHandler(cro.ClientID(), -1, nil)
+			if nyamqttobj.AutoReconnect > -1 {
+				nyamqttobj.statusHandler(cro.ClientID(), -2, nil)
+				client.Disconnect(uint(nyamqttobj.AutoReconnect))
+				if token := client.Connect(); token.Wait() && token.Error() != nil {
+					// nyamqttobj.statusHandler(cro.ClientID(), -1, token.Error())
+				} else {
+					nyamqttobj.SubscribeAutoRe()
+				}
+			}
 		}
 	}
 	opts.OnConnectionLost = nyamqttobj.hConnectionLost
@@ -261,7 +272,7 @@ func loadConfig(confCMap cmap.ConcurrentMap, key string) (string, error) {
 // 建立證書配置（自簽證書）
 func tlsConfig(caCert string, clientCert string, clientKey string) *tls.Config {
 	certpool := x509.NewCertPool()
-	ca, err := ioutil.ReadFile(caCert)
+	ca, err := os.ReadFile(caCert)
 	if err != nil {
 		fmt.Println("加密证书故障", err.Error())
 	}
@@ -283,7 +294,7 @@ func tlsConfig(caCert string, clientCert string, clientKey string) *tls.Config {
 // 建立證書配置（CA證書）
 func tlsConfigWithCA(caCert string) *tls.Config {
 	certpool := x509.NewCertPool()
-	ca, err := ioutil.ReadFile(caCert)
+	ca, err := os.ReadFile(caCert)
 	if err != nil {
 		fmt.Println("加密证书故障", err.Error())
 	}
@@ -374,6 +385,16 @@ func (p *NyaMQTT) UnsubscribeAuto() []bool {
 	var isOK []bool = make([]bool, len(p.SubscribeTopics))
 	for i, v := range p.SubscribeTopics {
 		isOK[i] = p.Unsubscribe(v)
+	}
+	return isOK
+}
+
+// SubscribeAutoRe: 自動重新訂閱主題
+func (p *NyaMQTT) SubscribeAutoRe() []bool {
+	var isOK []bool = make([]bool, len(p.SubscribeTopics))
+	for i, v := range p.SubscribeTopics {
+		isOK[i] = p.Unsubscribe(v)
+		isOK[i] = p.Subscribe(v)
 	}
 	return isOK
 }
