@@ -3,12 +3,19 @@ package nyaredis
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
 	redis "github.com/go-redis/redis/v8"
-	"github.com/tidwall/gjson"
 )
+
+type RedisDBConfig struct {
+	Address  string `json:"redis_addr"`
+	Port     string `json:"redis_port"`
+	Password string `json:"redis_pwd"`
+	DB       int    `json:"redis_db"`
+}
 
 // <類>
 var ctx = context.Background()
@@ -68,42 +75,23 @@ func New(configJsonString string) *NyaRedis {
 //	return NyaRedis 新的 NyaRedis 例項
 //	下一步使用 `Error()` 或 `ErrorString()` 檢查是否有錯誤
 func NewDB(configJsonString string, dbID int, maxDB int) *NyaRedis {
-	var configNG string = "NO CONFIG KEY : "
-	var configKey string = "redis_addr"
-	var redisAddress gjson.Result = gjson.Get(configJsonString, configKey)
-	if !redisAddress.Exists() {
-		return &NyaRedis{err: fmt.Errorf(configNG + configKey)}
+	var redisConfig RedisDBConfig
+	err := json.Unmarshal([]byte(configJsonString), &redisConfig)
+	if err != nil {
+		return &NyaRedis{err: err}
 	}
-	var addr = redisAddress.String()
-	configKey = "redis_port"
-	var redisPort gjson.Result = gjson.Get(configJsonString, configKey)
-	if !redisPort.Exists() {
-		return &NyaRedis{err: fmt.Errorf(configNG + configKey)}
-	}
-	var port = redisPort.String()
-	configKey = "redis_pwd"
-	var redisPassword gjson.Result = gjson.Get(configJsonString, configKey)
-	if !redisPassword.Exists() {
-		return &NyaRedis{err: fmt.Errorf(configNG + configKey)}
-	}
-	var pwd = redisPassword.String()
 
 	var dbid int = dbID
 	if !(0 <= dbID && dbID <= maxDB) {
-		configKey = "redis_db"
-		var redisDBID gjson.Result = gjson.Get(configJsonString, configKey)
-		if !redisDBID.Exists() {
-			return &NyaRedis{err: fmt.Errorf(configNG + configKey)}
-		}
-		dbid = int(redisDBID.Int())
+		dbid = redisConfig.DB
 	}
 
 	var nRedisDB *redis.Client = redis.NewClient(&redis.Options{
-		Addr:     addr + ":" + port,
-		Password: pwd,
+		Addr:     redisConfig.Address + ":" + redisConfig.Port,
+		Password: redisConfig.Password,
 		DB:       dbid,
 	})
-	_, err := nRedisDB.Ping(nRedisDB.Context()).Result()
+	_, err = nRedisDB.Ping(nRedisDB.Context()).Result()
 	if err != nil {
 		return &NyaRedis{err: err}
 	}

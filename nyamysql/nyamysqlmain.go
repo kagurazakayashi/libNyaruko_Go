@@ -6,8 +6,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
-	"strconv"
 )
+
+type MySQLDBConfig struct {
+	User     string `json:"mysql_user"`
+	Password string `json:"mysql_pwd"`
+	Address  string `json:"mysql_addr"`
+	Port     string `json:"mysql_port"`
+	DbName   string `json:"mysql_db"`
+	Limit    string `json:"mysql_limit"`
+}
 
 type NyaMySQL NyaMySQLT
 type NyaMySQLT struct {
@@ -25,57 +33,13 @@ type NyaMySQLT struct {
 //	return *NyaMySQL 新的 NyaMySQL 例項
 //	下一步使用 `Error()` 或 `ErrorString()` 檢查是否有錯誤
 func New(configJsonString string) *NyaMySQL {
-	var configNG string = "NO CONFIG KEY : "
-	var configKey string = "mysql_user"
-
-	var config map[string]string
-
-	err := json.Unmarshal([]byte(configJsonString), &config)
+	var mySQLConfig MySQLDBConfig
+	err := json.Unmarshal([]byte(configJsonString), &mySQLConfig)
 	if err != nil {
 		return &NyaMySQL{err: err}
 	}
 
-	name, ok := config[configKey]
-	if !ok {
-		return &NyaMySQL{err: fmt.Errorf(configNG + configKey)}
-	}
-
-	configKey = "mysql_pwd"
-	pwd, ok := config[configKey]
-	if !ok {
-		return &NyaMySQL{err: fmt.Errorf(configNG + configKey)}
-	}
-
-	configKey = "mysql_addr"
-	addr, ok := config[configKey]
-	if !ok {
-		return &NyaMySQL{err: fmt.Errorf(configNG + configKey)}
-	}
-
-	configKey = "mysql_db"
-	dbname, ok := config[configKey]
-	if !ok {
-		return &NyaMySQL{err: fmt.Errorf(configNG + configKey)}
-	}
-
-	configKey = "mysql_port"
-	port, ok := config[configKey]
-	if !ok {
-		return &NyaMySQL{err: fmt.Errorf(configNG + configKey)}
-	}
-
-	configKey = "mysql_limit"
-	limit, ok := config[configKey]
-	if !ok {
-		limit = "100"
-	} else {
-		_, err = strconv.Atoi(limit)
-		if err != nil {
-			return &NyaMySQL{err: fmt.Errorf("mysql_limit is not int")}
-		}
-	}
-
-	var sqlsetting string = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", name, pwd, addr, port, dbname)
+	var sqlsetting string = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", mySQLConfig.User, mySQLConfig.Password, mySQLConfig.Address, mySQLConfig.Port, mySQLConfig.DbName)
 	sqldb, err := sql.Open("mysql", sqlsetting)
 	if err != nil {
 		return &NyaMySQL{err: err}
@@ -83,7 +47,7 @@ func New(configJsonString string) *NyaMySQL {
 	if err := sqldb.Ping(); err != nil {
 		return &NyaMySQL{err: err}
 	}
-	return &NyaMySQL{db: sqldb, limit: limit}
+	return &NyaMySQL{db: sqldb, limit: mySQLConfig.Limit}
 }
 
 // SqlExec: 執行 SQL 語句
