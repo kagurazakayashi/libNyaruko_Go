@@ -15,7 +15,7 @@ var mysqlconfig string = `{
 }`
 
 func TestQueryCMD(t *testing.T) {
-	nyaMS := New(mysqlconfig)
+	nyaMS := New(mysqlconfig, nil)
 	if nyaMS.Error() != nil {
 		fmt.Println("MySQL DB Link error:", nyaMS.Error().Error())
 		return
@@ -32,7 +32,7 @@ func TestQueryCMD(t *testing.T) {
 }
 
 func TestQueryData(t *testing.T) {
-	nyaMS := New(mysqlconfig)
+	nyaMS := New(mysqlconfig, nil)
 	if nyaMS.Error() != nil {
 		fmt.Println("MySQL DB Link error:", nyaMS.Error().Error())
 		return
@@ -50,7 +50,7 @@ func TestQueryData(t *testing.T) {
 }
 
 func TestAdd(t *testing.T) {
-	nyaMS := New(mysqlconfig)
+	nyaMS := New(mysqlconfig, nil)
 	if nyaMS.Error() != nil {
 		fmt.Println("MySQL DB Link error:", nyaMS.Error().Error())
 		return
@@ -66,7 +66,7 @@ func TestAdd(t *testing.T) {
 }
 
 func TestAdds(t *testing.T) {
-	nyaMS := New(mysqlconfig)
+	nyaMS := New(mysqlconfig, nil)
 	if nyaMS.Error() != nil {
 		fmt.Println("MySQL DB Link error:", nyaMS.Error().Error())
 		return
@@ -82,7 +82,7 @@ func TestAdds(t *testing.T) {
 }
 
 func TestUpdate(t *testing.T) {
-	nyaMS := New(mysqlconfig)
+	nyaMS := New(mysqlconfig, nil)
 	if nyaMS.Error() != nil {
 		fmt.Println("MySQL DB Link error:", nyaMS.Error().Error())
 		return
@@ -98,7 +98,7 @@ func TestUpdate(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	nyaMS := New(mysqlconfig)
+	nyaMS := New(mysqlconfig, nil)
 	if nyaMS.Error() != nil {
 		fmt.Println("MySQL DB Link error:", nyaMS.Error().Error())
 		return
@@ -115,7 +115,7 @@ func TestDelete(t *testing.T) {
 }
 
 func TestDeleteNoPK(t *testing.T) {
-	nyaMS := New(mysqlconfig)
+	nyaMS := New(mysqlconfig, nil)
 	if nyaMS.Error() != nil {
 		fmt.Println("MySQL DB Link error:", nyaMS.Error().Error())
 		return
