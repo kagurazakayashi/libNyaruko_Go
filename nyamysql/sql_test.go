@@ -86,10 +86,9 @@ func TestDelete(t *testing.T) {
 		fmt.Println("MySQL DB Link error:", nyaMS.Error().Error())
 		return
 	}
-	wherein := "?,?,?"
 	and := "or `name`=?"
 	values := []interface{}{3, 5, 6, "test2"}
-	result, err := nyaMS.DeleteRecord("test", "id", wherein, and, values...)
+	result, err := nyaMS.DeleteRecord("test", "id", and, values...)
 	if err != nil {
 		fmt.Println("Delete error:", err.Error())
 		return

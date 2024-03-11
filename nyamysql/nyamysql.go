@@ -72,13 +72,12 @@ func (p *NyaMySQL) QueryDataCMD(sql string, value ...[]interface{}) (map[string]
 // QueryData: 從SQL資料庫中查詢
 //
 //	所有關鍵字除*以外需要用``包裹
-//	`sqldb`   string      mysql資料庫名，使用預設值只需填寫""
-//	`recn`    string      查詢語句的返回。全部：*，指定：`id`
-//	`table`   string      從哪個表中查詢，此處可以使用關聯語句
-//	`where`   string      where語句部分，最前方不需要填寫where，例：`id`=1
-//	`orderby` string      排序，例：`id` ASC/DESC
-//	`limit`   string      分頁，例：1,10
-//	`value`   interface{} 查詢條件的值
+//	`recn`		string		查詢語句的返回。全部：*，指定：`id`
+//	`table`		string		從哪個表中查詢，此處可以使用關聯語句
+//	`where`		string		where語句部分，最前方不需要填寫where，例：`id`=1
+//	`orderby`	string		排序，例：`id` ASC/DESC
+//	`limit`		string		分頁，例：1,10
+//	`value`		interface{}	查詢條件的值
 //	return cmap.ConcurrentMap 和 error 物件，結構為：
 //	{
 //	    "0":{"id":1,"name":"1"},
@@ -124,12 +123,9 @@ func (p *NyaMySQL) QueryData(recn string, table string, where string, orderby st
 // AddRecord: 向SQL資料庫中新增
 //
 //	所有關鍵字除*以外需要用``包裹
-//	`sqldb`  string		mysql資料庫名，使用預設值只需填寫""
-//	`table`  string		從哪個表中查詢不需要``包裹
-//	`key`    string		需要新增的列，需要以,分割
-//	`val`    string		與key對應的值，以,分割
-//	`values` string		(此項不為"",val無效)新增多行資料與key對應的值，以,分割,例(1,2),(2,3)
-//	`addValues` ...interface{} 額外的新增值，會在values後面新增
+//	`table`		string		從哪個表中查詢不需要``包裹
+//	`key`		string		需要新增的列，需要以,分割
+//	`values`	...interface{}	額外的新增值，會在values後面新增
 //	return int64 和 error 物件，返回新增行的id
 func (p *NyaMySQL) AddRecord(table string, key []string, values ...interface{}) (int64, error) {
 	if len(values)%len(key) != 0 {
@@ -195,11 +191,10 @@ func (p *NyaMySQL) AddRecord(table string, key []string, values ...interface{}) 
 // UpdataRecord: 從SQL資料庫中修改指定的值
 //
 //	所有關鍵字除*以外需要用``包裹
-//	`sqldb`  string mysql資料庫名，使用預設值只需填寫""
-//	`table`  從哪個表中查詢不需要``包裹
-//	`updata` 需要修改的值，需要以,分割，例:`name`="aa",`age`=10
-//	`where`  需要修改行的條件，例:`id`=10
-//	`values` ...interface{} 額外的修改值
+//	`table`		string		從哪個表中查詢不需要``包裹
+//	`updata`	string		需要修改的值，需要以,分割，例:`name`="aa",`age`=10
+//	`where`		string		需要修改行的條件，例:`id`=10
+//	`values`	...interface{}	額外的修改值
 //	return int64 和 error，返回更新的行数
 func (p *NyaMySQL) UpdateRecord(table string, updata string, where string, values ...interface{}) (int64, error) {
 	var dbq string = "update `" + table + "` set " + updata
@@ -239,20 +234,32 @@ func (p *NyaMySQL) UpdateRecord(table string, updata string, where string, value
 // DeleteRecord: 從SQL資料庫中刪除行
 //
 //	所有關鍵字除*以外需要用``包裹
-//	`sqldb`		string		mysql資料庫名，使用預設值只需填寫""
 //	`table`		string		從哪個表中查詢不需要``包裹
 //	`key`		string		根據哪個關鍵字刪除
-//	`where`		string		關鍵字對應的值
 //	`and`		string		刪除條件的附加條件會在語句末尾新增。可以寫入 and 或 or 或其他邏輯關鍵字以新增多個判斷條件
-//	`wherein`	string		以where xx in (wherein)的方式刪除。wherein不為""時value無效，and 仍然有效
-//	`p.debug`		*log.Logger	指定log物件，沒有填寫nil
+//	`values`	...interface{}	刪除條件的值
 //	return		int64		刪除的行数
 //	return		error		錯誤
-func (p *NyaMySQL) DeleteRecord(table string, key string, wherein string, and string, values ...interface{}) (int64, error) {
+func (p *NyaMySQL) DeleteRecord(table string, key string, and string, values ...interface{}) (int64, error) {
 	var dbq string = fmt.Sprintf("delete from `%s` where `%s`", table, key)
-	if wherein == "" {
+	if len(values) <= 1 {
 		dbq += fmt.Sprintf("=? %s", and)
 	} else {
+		wherein := ""
+		length := len(values)
+		andLen := 0
+		for i := range and {
+			if and[i:i+1] == "?" {
+				andLen++
+			}
+		}
+		length = length - andLen
+		for i := 0; i < length; i++ {
+			if wherein != "" {
+				wherein += ","
+			}
+			wherein += "?"
+		}
 		dbq += fmt.Sprintf(" in (%s) %s", wherein, and)
 	}
 	//删除uid=2的数据
@@ -286,10 +293,9 @@ func (p *NyaMySQL) DeleteRecord(table string, key string, wherein string, and st
 // 從 SQL 資料庫無主鍵表中刪除行
 //
 //	所有關鍵字除*以外需要用``包裹
-//	`sqldb`  string     MySQL 資料庫名，使用預設值只需填寫 ""
-//	`table`  string     從哪個表中查詢不需要``包裹
-//	`keys`   []string   根據哪個關鍵字刪除
-//	`values` [][]string 關鍵字對應的值
+//	`table`		string		從哪個表中查詢不需要``包裹
+//	`keys`		[]string	根據哪個關鍵字刪除
+//	`values`	...interface{}	刪除條件的值
 func (p *NyaMySQL) DeleteRecordNoPK(table string, keys []string, values ...interface{}) error {
 	if len(values)%len(keys) != 0 {
 		return fmt.Errorf("'values'内容数量与'keys'不符")
@@ -314,7 +320,7 @@ func (p *NyaMySQL) DeleteRecordNoPK(table string, keys []string, values ...inter
 	if p.debug != nil {
 		p.debug.Println("\n" + dbPrintStr(dbq, values))
 	} else {
-		fmt.Println("[DeleteRecord]", dbPrintStr(dbq, values))
+		fmt.Println("[DeleteRecordNoPK]", dbPrintStr(dbq, values))
 	}
 
 	stmt, err := p.db.Prepare(dbq)
@@ -342,9 +348,9 @@ func (p *NyaMySQL) DeleteRecordNoPK(table string, keys []string, values ...inter
 // FreequeryData: 從SQL資料庫中尋找
 //
 //	所有關鍵字除*以外需要用``包裹
-//	`sqldb`  string      MySQL 資料庫名，使用預設值只需填寫 ""
-//	`sqlstr` string      需要執行的SQL語句
-//	`p.debug`  *log.Logger 指定log物件，沒有填寫nil
+//	`sqldb`		string		MySQL 資料庫名，使用預設值只需填寫 ""
+//	`sqlstr`	string		需要執行的SQL語句
+//	`values`	...interface{}	指定log物件，沒有填寫nil
 //	return   cmap.ConcurrentMap 和 error 物件，結構為：
 //	{
 //	    "0":{"id":1,"name":"1"},
