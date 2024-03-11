@@ -6,11 +6,11 @@ import (
 )
 
 var mysqlconfig string = `{
-	"mysql_user": "dbuser",
-	"mysql_pwd": "dbpwd",
+	"mysql_user": "0wew0",
+	"mysql_pwd": "7%5cfM3!&pw9^#6j",
 	"mysql_addr": "127.0.0.1",
 	"mysql_port": "3306",
-	"mysql_db": "test",
+	"mysql_db": "0wew0",
 	"mysql_limit": "100"
 }`
 
@@ -55,26 +55,9 @@ func TestAdd(t *testing.T) {
 		fmt.Println("MySQL DB Link error:", nyaMS.Error().Error())
 		return
 	}
-	key := "`id`,`name`"
-	value := "?,?"
-	values := []interface{}{1, "test"}
-	_, err := nyaMS.AddRecord("test", key, value, "", values...)
-	if err != nil {
-		fmt.Println("Add error:", err.Error())
-		return
-	}
-}
-
-func TestAdds(t *testing.T) {
-	nyaMS := New(mysqlconfig, nil)
-	if nyaMS.Error() != nil {
-		fmt.Println("MySQL DB Link error:", nyaMS.Error().Error())
-		return
-	}
-	key := "`id`,`name`"
-	value := "(?,?),(?,?)"
-	values := []interface{}{2, "test1", 3, "test2"}
-	_, err := nyaMS.AddRecord("test", key, "", value, values...)
+	key := []string{"id", "name"}
+	values := []interface{}{1, "test", 2, "test1", 3, "test2"}
+	_, err := nyaMS.AddRecord("test", key, values...)
 	if err != nil {
 		fmt.Println("Add error:", err.Error())
 		return

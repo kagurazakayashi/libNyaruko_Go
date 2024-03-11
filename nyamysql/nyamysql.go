@@ -131,17 +131,36 @@ func (p *NyaMySQL) QueryData(recn string, table string, where string, orderby st
 //	`values` string		(此項不為"",val無效)新增多行資料與key對應的值，以,分割,例(1,2),(2,3)
 //	`addValues` ...interface{} 額外的新增值，會在values後面新增
 //	return int64 和 error 物件，返回新增行的id
-func (p *NyaMySQL) AddRecord(table string, key string, val string, values string, addValues ...interface{}) (int64, error) {
-	var dbq string = "insert into `" + table + "` (" + key + ")" + "VALUES "
-	if values != "" {
-		dbq += values
-	} else {
-		dbq += "(" + val + ")"
+func (p *NyaMySQL) AddRecord(table string, key []string, values ...interface{}) (int64, error) {
+	if len(values)%len(key) != 0 {
+		return 0, fmt.Errorf("'values'内容数量与'key'不符")
 	}
+	var dbq string = "insert into `" + table + "` ("
+	keyStr := ""
+	for _, v := range key {
+		if keyStr != "" {
+			keyStr += ","
+		}
+		keyStr += "`" + v + "`"
+	}
+	length := len(key)
+	dbq += keyStr + ")" + " VALUES "
+	valuesStr := "("
+	for i := range values {
+		if i != 0 {
+			if i%length == 0 {
+				valuesStr += "),("
+			} else {
+				valuesStr += ","
+			}
+		}
+		valuesStr += "?"
+	}
+	dbq += valuesStr + ")"
 	if p.debug != nil {
-		p.debug.Println("\n" + dbPrintStr(dbq, addValues))
+		p.debug.Println("\n" + dbPrintStr(dbq, values))
 	} else {
-		fmt.Println("[AddRecord]", dbPrintStr(dbq, addValues))
+		fmt.Println("[AddRecord]", dbPrintStr(dbq, values))
 	}
 
 	stmt, err := p.db.Prepare(dbq)
@@ -152,7 +171,7 @@ func (p *NyaMySQL) AddRecord(table string, key string, val string, values string
 		return 0, err
 	}
 
-	result, err := stmt.Exec(addValues...)
+	result, err := stmt.Exec(values...)
 	stmt.Close()
 	if err != nil {
 		if p.debug != nil {
@@ -160,7 +179,13 @@ func (p *NyaMySQL) AddRecord(table string, key string, val string, values string
 		}
 		return 0, err
 	}
-	id, _ := result.LastInsertId()
+	id, err := result.LastInsertId()
+	if err != nil {
+		if p.debug != nil {
+			p.debug.Printf("insert faied, error:[%v]", err.Error())
+		}
+		return 0, err
+	}
 	if p.debug != nil {
 		p.debug.Printf("insert success, last id:[%d]\n", id)
 	}
