@@ -109,74 +109,81 @@ func (p *NyaMQTT) SetNyaMQTTSMessageHandler(handler NyaMQTTSMessageHandler) {
 func New(configJsonString string, statusHandler NyaMQTTStatusHandler, messageHandler NyaMQTTSMessageHandler) *NyaMQTT {
 	var configNG string = "NO CONFIG KEY : "
 	var configKey string = "mqtt_addr"
-	var redisBroker gjson.Result = gjson.Get(configJsonString, configKey)
-	if !redisBroker.Exists() {
+	var mqttBroker gjson.Result = gjson.Get(configJsonString, configKey)
+	if !mqttBroker.Exists() {
 		return &NyaMQTT{err: fmt.Errorf(configNG + configKey)}
 	}
-	var broker string = redisBroker.String()
+	var broker string = mqttBroker.String()
 	configKey = "mqtt_port"
-	var redisPort gjson.Result = gjson.Get(configJsonString, configKey)
-	if !redisPort.Exists() {
+	var mqttPort gjson.Result = gjson.Get(configJsonString, configKey)
+	if !mqttPort.Exists() {
 		return &NyaMQTT{err: fmt.Errorf(configNG + configKey)}
 	}
-	var port string = redisPort.String()
+	var port string = mqttPort.String()
 	configKey = "mqtt_client"
-	var redisClientID gjson.Result = gjson.Get(configJsonString, configKey)
+	var mqttClientID gjson.Result = gjson.Get(configJsonString, configKey)
 	var clientid string = ""
-	if redisClientID.Exists() {
-		clientid = redisClientID.String()
+	if mqttClientID.Exists() {
+		clientid = mqttClientID.String()
 	} else {
 		clientid = "client" + strconv.FormatInt(time.Now().UnixNano(), 10)
 	}
 	configKey = "mqtt_user"
-	var redisUsername gjson.Result = gjson.Get(configJsonString, configKey)
+	var mqttUsername gjson.Result = gjson.Get(configJsonString, configKey)
 	var user string = ""
-	if redisUsername.Exists() {
-		user = redisUsername.String()
+	if mqttUsername.Exists() {
+		user = mqttUsername.String()
 	}
 	configKey = "mqtt_pwd"
-	var redisPassword gjson.Result = gjson.Get(configJsonString, configKey)
+	var mqttPassword gjson.Result = gjson.Get(configJsonString, configKey)
 	var password string = ""
-	if redisPassword.Exists() {
-		password = redisPassword.String()
+	if mqttPassword.Exists() {
+		password = mqttPassword.String()
 	}
 	configKey = "mqtt_qos"
-	var redisQOS gjson.Result = gjson.Get(configJsonString, configKey)
+	var mqttQOS gjson.Result = gjson.Get(configJsonString, configKey)
 	var qos byte = 0
-	if redisQOS.Exists() {
-		qos = IntToBytes(int(redisQOS.Int()))[0]
+	if mqttQOS.Exists() {
+		qos = IntToBytes(int(mqttQOS.Int()))[0]
+	}
+	configKey = "mqtt_timeout"
+	var mqttTimeout gjson.Result = gjson.Get(configJsonString, configKey)
+	var timeout time.Duration = 30
+	if mqttTimeout.Exists() {
+		timeout = time.Duration(mqttTimeout.Int())
 	}
 	configKey = "mqtt_retained"
-	var redisRetained gjson.Result = gjson.Get(configJsonString, configKey)
+	var mqttRetained gjson.Result = gjson.Get(configJsonString, configKey)
 	var retained bool = false
-	if redisQOS.Exists() {
-		retained = redisRetained.Int() != 0
+	if mqttRetained.Exists() {
+		retained = mqttRetained.Int() != 0
 	}
 	var certExists [3]bool = [3]bool{false, false, false}
 	configKey = "mqtt_cert_clentca"
-	var redisClentCA gjson.Result = gjson.Get(configJsonString, configKey)
+	var mqttClentCA gjson.Result = gjson.Get(configJsonString, configKey)
 	var certClentCA string = ""
-	if redisClentCA.Exists() {
-		certClentCA = redisClentCA.String()
+	if mqttClentCA.Exists() {
+		certClentCA = mqttClentCA.String()
 		certExists[0] = true
 	}
 	configKey = "mqtt_cert_clent"
-	var redisClent gjson.Result = gjson.Get(configJsonString, configKey)
+	var mqttClent gjson.Result = gjson.Get(configJsonString, configKey)
 	var certClient string = ""
-	if redisClent.Exists() {
-		certClient = redisClent.String()
+	if mqttClent.Exists() {
+		certClient = mqttClent.String()
 		certExists[1] = true
 	}
 	configKey = "mqtt_cert_clentkey"
-	var redisClentKey gjson.Result = gjson.Get(configJsonString, configKey)
+	var mqttClentKey gjson.Result = gjson.Get(configJsonString, configKey)
 	var certClentkey string = ""
-	if redisClentKey.Exists() {
-		certClentkey = redisClentKey.String()
+	if mqttClentKey.Exists() {
+		certClentkey = mqttClentKey.String()
 		certExists[2] = true
 	}
 
 	var urlProtocol string = "tcp"
 	var opts *mqtt.ClientOptions = mqtt.NewClientOptions()
+	opts.SetConnectTimeout(timeout * time.Second)
 	if certExists[0] {
 		urlProtocol = "ssl"
 		if certExists[1] && certExists[2] {
