@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -72,6 +73,7 @@ func Option_isErrorStop(v bool) OptionConfig {
 // NyaMQTTStatusHandler: MQTT 連線狀態發生變化時觸發
 //
 //	`status` int8  連線狀態:
+//	-3 重新連線失敗
 //	-2 正在重新連線
 //	-1 連線丟失
 //	 1 已連線
@@ -183,7 +185,7 @@ func New(configJsonString string, statusHandler NyaMQTTStatusHandler, messageHan
 
 	var urlProtocol string = "tcp"
 	var opts *mqtt.ClientOptions = mqtt.NewClientOptions()
-	opts.SetConnectTimeout(timeout * time.Second)
+	opts.SetConnectTimeout(timeout * time.Millisecond)
 	if certExists[0] {
 		urlProtocol = "ssl"
 		if certExists[1] && certExists[2] {
@@ -207,17 +209,17 @@ func New(configJsonString string, statusHandler NyaMQTTStatusHandler, messageHan
 
 	var nyamqttobj NyaMQTT = NyaMQTT{statusHandler: statusHandler, messageHandler: messageHandler}
 	nyamqttobj.hMessage = func(client mqtt.Client, msg mqtt.Message) {
-		cro := client.OptionsReader()
+		var cro mqtt.ClientOptionsReader = client.OptionsReader()
 		var message string = string(msg.Payload())
-		if nyamqttobj.statusHandler != nil {
-			nyamqttobj.messageHandler(cro.ClientID(), msg.Topic(), message)
+		if nyamqttobj.messageHandler != nil {
+			nyamqttobj.messageHandler(servURLstr(cro, msg), msg.Topic(), message)
 		}
 	}
 	opts.SetDefaultPublishHandler(nyamqttobj.hMessage)
 	nyamqttobj.hConnect = func(client mqtt.Client) {
-		cro := client.OptionsReader()
+		var cro mqtt.ClientOptionsReader = client.OptionsReader()
 		if nyamqttobj.statusHandler != nil {
-			nyamqttobj.statusHandler(cro.ClientID(), 1, nil)
+			nyamqttobj.statusHandler(servURLstr(cro, nil), 1, nil)
 		}
 	}
 	opts.OnConnect = nyamqttobj.hConnect
@@ -238,7 +240,7 @@ func New(configJsonString string, statusHandler NyaMQTTStatusHandler, messageHan
 				nyamqttobj.statusHandler(cro.ClientID(), -2, nil)
 				client.Disconnect(uint(nyamqttobj.AutoReconnect))
 				if token := client.Connect(); token.Wait() && token.Error() != nil {
-					// nyamqttobj.statusHandler(cro.ClientID(), -1, token.Error())
+					nyamqttobj.statusHandler(cro.ClientID(), -3, token.Error())
 				} else {
 					nyamqttobj.SubscribeAutoRe()
 				}
@@ -260,6 +262,19 @@ func New(configJsonString string, statusHandler NyaMQTTStatusHandler, messageHan
 		return &NyaMQTT{err: token.Error()}
 	}
 	return &NyaMQTT{db: client, err: nil, defaultQOS: qos, defaultRetained: retained, SubscribeTopics: []string{}}
+}
+
+func servURLstr(cro mqtt.ClientOptionsReader, msg mqtt.Message) string {
+	var brokers []*url.URL = cro.Servers()
+	var infos []string = []string{}
+	for i, broker := range brokers {
+		if msg == nil {
+			infos = append(infos, fmt.Sprintf("[%d]%s", i+1, broker.String()))
+		} else {
+			infos = append(infos, fmt.Sprintf("[%d]%s(%s)", i+1, broker.String(), msg.Topic()))
+		}
+	}
+	return strings.Join(infos, "; ")
 }
 
 // loadConfig: 從載入的配置檔案中載入配置
