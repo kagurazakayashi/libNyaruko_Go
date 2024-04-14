@@ -25,7 +25,7 @@ var ctx = context.Background()
 type NyaMQTT NyaMQTTT
 type NyaMQTTT struct {
 	SubscribeTopics []string // 已訂閱的主題列表
-	AutoReconnect   int      // 是否自動重新連線(毫秒等待時間，-1為禁用)
+	AutoReconnect   []int    // 是否自動重新連線(毫秒等待時間，-1為禁用),自動重新連線最大次數
 
 	db              mqtt.Client
 	err             error
@@ -236,13 +236,24 @@ func New(configJsonString string, statusHandler NyaMQTTStatusHandler, messageHan
 		cro := client.OptionsReader()
 		if nyamqttobj.statusHandler != nil {
 			nyamqttobj.statusHandler(cro.ClientID(), -1, nil)
-			if nyamqttobj.AutoReconnect > -1 {
+			if nyamqttobj.AutoReconnect[0] > -1 {
 				nyamqttobj.statusHandler(cro.ClientID(), -2, nil)
-				client.Disconnect(uint(nyamqttobj.AutoReconnect))
-				if token := client.Connect(); token.Wait() && token.Error() != nil {
-					nyamqttobj.statusHandler(cro.ClientID(), -3, token.Error())
-				} else {
-					nyamqttobj.SubscribeAutoRe()
+				var disconnectTime int = nyamqttobj.AutoReconnect[0] - 1
+				if disconnectTime < 0 {
+					disconnectTime = 0
+				}
+				client.Disconnect(uint(disconnectTime))
+
+				var retry int = 0
+				for retry < nyamqttobj.AutoReconnect[1] || nyamqttobj.AutoReconnect[1] < 0 {
+					retry++
+					time.Sleep(time.Duration(int64(nyamqttobj.AutoReconnect[0])*timeout.Milliseconds()) * time.Millisecond)
+					if token := client.Connect(); token.Wait() && token.Error() != nil {
+						nyamqttobj.statusHandler(cro.ClientID(), -3, token.Error())
+					} else {
+						nyamqttobj.SubscribeAutoRe()
+						break
+					}
 				}
 			}
 		}
@@ -267,11 +278,11 @@ func New(configJsonString string, statusHandler NyaMQTTStatusHandler, messageHan
 func servURLstr(cro mqtt.ClientOptionsReader, msg mqtt.Message) string {
 	var brokers []*url.URL = cro.Servers()
 	var infos []string = []string{}
-	for i, broker := range brokers {
+	for _, broker := range brokers {
 		if msg == nil {
-			infos = append(infos, fmt.Sprintf("[%d]%s", i+1, broker.String()))
+			infos = append(infos, broker.String())
 		} else {
-			infos = append(infos, fmt.Sprintf("[%d]%s(%s)", i+1, broker.String(), msg.Topic()))
+			infos = append(infos, fmt.Sprintf("%s (%s)", broker.String(), msg.Topic()))
 		}
 	}
 	return strings.Join(infos, "; ")
