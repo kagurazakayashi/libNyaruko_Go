@@ -25,7 +25,7 @@ var ctx = context.Background()
 type NyaMQTT NyaMQTTT
 type NyaMQTTT struct {
 	SubscribeTopics []string // 已訂閱的主題列表
-	AutoReconnect   []int    // 是否自動重新連線(毫秒等待時間，-1為禁用),自動重新連線最大次數
+	LinkInfo        string
 
 	db              mqtt.Client
 	err             error
@@ -154,6 +154,19 @@ func New(configJsonString string, statusHandler NyaMQTTStatusHandler, messageHan
 	if mqttTimeout.Exists() {
 		timeout = time.Duration(mqttTimeout.Int())
 	}
+	configKey = "mqtt_autoreconnect"
+	var mqttAutoreconnect gjson.Result = gjson.Get(configJsonString, configKey)
+	var autoreconnect int64 = -1
+	if mqttAutoreconnect.Exists() {
+		autoreconnect = mqttAutoreconnect.Int()
+	}
+	configKey = "mqtt_autoreconnectnum"
+	var mqttAutoreconnectNum gjson.Result = gjson.Get(configJsonString, configKey)
+	var autoreconnectmax int = -1
+	if mqttAutoreconnectNum.Exists() {
+		autoreconnectmax = int(mqttAutoreconnectNum.Int())
+	}
+
 	configKey = "mqtt_retained"
 	var mqttRetained gjson.Result = gjson.Get(configJsonString, configKey)
 	var retained bool = false
@@ -185,6 +198,11 @@ func New(configJsonString string, statusHandler NyaMQTTStatusHandler, messageHan
 
 	var urlProtocol string = "tcp"
 	var opts *mqtt.ClientOptions = mqtt.NewClientOptions()
+
+	opts.SetAutoReconnect(false)
+	// opts.SetAutoReconnect(autoreconnect >= 0)
+	// opts.SetMaxReconnectInterval(time.Duration(autoreconnect))
+
 	opts.SetConnectTimeout(timeout * time.Millisecond)
 	if certExists[0] {
 		urlProtocol = "ssl"
@@ -207,6 +225,7 @@ func New(configJsonString string, statusHandler NyaMQTTStatusHandler, messageHan
 		opts.SetPassword(password)
 	}
 
+	var linkInfo string = fmt.Sprintf("%s:%s (%s)", broker, port, clientid)
 	var nyamqttobj NyaMQTT = NyaMQTT{statusHandler: statusHandler, messageHandler: messageHandler}
 	nyamqttobj.hMessage = func(client mqtt.Client, msg mqtt.Message) {
 		var cro mqtt.ClientOptionsReader = client.OptionsReader()
@@ -226,7 +245,7 @@ func New(configJsonString string, statusHandler NyaMQTTStatusHandler, messageHan
 
 	nyamqttobj.hConnectAttempt = func(broker *url.URL, tlsCfg *tls.Config) *tls.Config {
 		if nyamqttobj.statusHandler != nil {
-			nyamqttobj.statusHandler("", 2, nil)
+			nyamqttobj.statusHandler(broker.String(), 2, nil)
 		}
 		return tlsCfg
 	}
@@ -235,25 +254,27 @@ func New(configJsonString string, statusHandler NyaMQTTStatusHandler, messageHan
 	nyamqttobj.hConnectionLost = func(client mqtt.Client, err error) {
 		cro := client.OptionsReader()
 		if nyamqttobj.statusHandler != nil {
-			nyamqttobj.statusHandler(cro.ClientID(), -1, nil)
-			if nyamqttobj.AutoReconnect[0] > -1 {
-				nyamqttobj.statusHandler(cro.ClientID(), -2, nil)
-				var disconnectTime int = nyamqttobj.AutoReconnect[0] - 1
-				if disconnectTime < 0 {
-					disconnectTime = 0
-				}
-				client.Disconnect(uint(disconnectTime))
+			nyamqttobj.statusHandler(servURLstr(cro, nil), -1, nil)
+		}
+		if autoreconnect > -1 {
+			// nyamqttobj.statusHandler(servURLstr(cro, nil), -2, nil)
+			var disconnectTime int64 = autoreconnect - 1
+			if disconnectTime < 0 {
+				disconnectTime = 0
+			}
+			client.Disconnect(uint(disconnectTime))
 
-				var retry int = 0
-				for retry < nyamqttobj.AutoReconnect[1] || nyamqttobj.AutoReconnect[1] < 0 {
-					retry++
-					time.Sleep(time.Duration(int64(nyamqttobj.AutoReconnect[0])*timeout.Milliseconds()) * time.Millisecond)
-					if token := client.Connect(); token.Wait() && token.Error() != nil {
-						nyamqttobj.statusHandler(cro.ClientID(), -3, token.Error())
-					} else {
-						nyamqttobj.SubscribeAutoRe()
-						break
+			var retry int = 0
+			for retry < autoreconnectmax || autoreconnectmax < 0 {
+				retry++
+				time.Sleep(time.Duration(autoreconnect) * time.Millisecond)
+				if token := client.Connect(); token.Wait() && token.Error() != nil {
+					if nyamqttobj.statusHandler != nil {
+						nyamqttobj.statusHandler(servURLstr(cro, nil), -3, token.Error())
 					}
+				} else {
+					nyamqttobj.SubscribeAutoRe()
+					break
 				}
 			}
 		}
@@ -263,16 +284,24 @@ func New(configJsonString string, statusHandler NyaMQTTStatusHandler, messageHan
 	nyamqttobj.hReconnecting = func(c mqtt.Client, co *mqtt.ClientOptions) {
 		cro := c.OptionsReader()
 		if nyamqttobj.statusHandler != nil {
-			nyamqttobj.statusHandler(cro.ClientID(), -2, nil)
+			nyamqttobj.statusHandler(servURLstr(cro, nil), -2, nil)
 		}
 	}
 	opts.OnReconnecting = nyamqttobj.hReconnecting
 
 	var client mqtt.Client = mqtt.NewClient(opts)
-	if token := client.Connect(); token.Wait() && token.Error() != nil {
-		return &NyaMQTT{err: token.Error()}
+
+	err := linkStart(client)
+	if err != nil {
+		return &NyaMQTT{err: err}
 	}
-	return &NyaMQTT{db: client, err: nil, defaultQOS: qos, defaultRetained: retained, SubscribeTopics: []string{}}
+	return &NyaMQTT{db: client, err: nil, defaultQOS: qos, defaultRetained: retained, SubscribeTopics: []string{}, LinkInfo: linkInfo}
+}
+
+func linkStart(client mqtt.Client) error {
+	token := client.Connect()
+	token.Wait()
+	return token.Error()
 }
 
 func servURLstr(cro mqtt.ClientOptionsReader, msg mqtt.Message) string {
@@ -377,7 +406,6 @@ func (p *NyaMQTT) Subscribe(topic string, options ...OptionConfig) bool {
 	for _, o := range options {
 		o(option)
 	}
-	// fmt.Println("Subscribe", topic, option.qos)
 	token := p.db.Subscribe(topic, option.qos, nil)
 	token.Wait()
 	p.err = token.Error()
@@ -386,6 +414,12 @@ func (p *NyaMQTT) Subscribe(topic string, options ...OptionConfig) bool {
 		return true
 	}
 	return false
+}
+func (p *NyaMQTT) IsConnected() bool {
+	if p == nil || p.db == nil {
+		return false
+	}
+	return p.db.IsConnected()
 }
 
 // SubscribeMulti: 批次訂閱主題
