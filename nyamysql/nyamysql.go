@@ -29,24 +29,23 @@ func (p *NyaMySQL) QueryDataCMD(sql string, value ...[]interface{}) (map[string]
 		} else {
 			fmt.Println("[QueryData]", dbPrintStr(v, value[i]))
 		}
-		if i+1 == len(sqls) {
-			stmt, err := p.db.Prepare(v)
-			if err != nil {
+		if value == nil {
+			if i+1 == len(sqls) {
+				query, err := p.db.Query(v)
+				if err != nil {
+					if p.debug != nil {
+						p.debug.Printf("query faied, error:[%v]", err.Error())
+					}
+					return map[string]map[string]string{}, err
+				}
+				return handleQD(query, p.debug)
+			} else {
+				_, err := p.db.Exec(v)
 				if p.debug != nil {
 					p.debug.Printf("query faied, error:[%v]", err.Error())
 				}
 				return map[string]map[string]string{}, err
 			}
-			val := value[i]
-			query, err := stmt.Query(val...)
-			stmt.Close()
-			if err != nil {
-				if p.debug != nil {
-					p.debug.Printf("query faied, error:[%v]", err.Error())
-				}
-				return map[string]map[string]string{}, err
-			}
-			return handleQD(query, p.debug)
 		} else {
 			stmt, err := p.db.Prepare(v)
 			if err != nil {
@@ -56,13 +55,25 @@ func (p *NyaMySQL) QueryDataCMD(sql string, value ...[]interface{}) (map[string]
 				return map[string]map[string]string{}, err
 			}
 			val := value[i]
-			_, err = stmt.Exec(val...)
-			stmt.Close()
-			if err != nil {
-				if p.debug != nil {
-					p.debug.Printf("query faied, error:[%v]", err.Error())
+			if i+1 == len(sqls) {
+				query, err := stmt.Query(val...)
+				stmt.Close()
+				if err != nil {
+					if p.debug != nil {
+						p.debug.Printf("query faied, error:[%v]", err.Error())
+					}
+					return map[string]map[string]string{}, err
 				}
-				return map[string]map[string]string{}, err
+				return handleQD(query, p.debug)
+			} else {
+				_, err = stmt.Exec(val...)
+				stmt.Close()
+				if err != nil {
+					if p.debug != nil {
+						p.debug.Printf("query faied, error:[%v]", err.Error())
+					}
+					return map[string]map[string]string{}, err
+				}
 			}
 		}
 	}
@@ -101,21 +112,36 @@ func (p *NyaMySQL) QueryData(recn string, table string, where string, orderby st
 	} else {
 		fmt.Println("[QueryData]", dbPrintStr(dbq, value))
 	}
-	stmt, err := p.db.Prepare(dbq)
-	if err != nil {
-		if p.debug != nil {
-			p.debug.Printf("query faied, error:[%v]", err.Error())
-		}
-		return map[string]map[string]string{}, err
-	}
+	var (
+		query *sql.Rows
+		err   error
+	)
 
-	query, err := stmt.Query(value...)
-	stmt.Close()
-	if err != nil {
-		if p.debug != nil {
-			p.debug.Printf("query faied, error:[%v]", err.Error())
+	if value == nil {
+		query, err = p.db.Query(dbq)
+		if err != nil {
+			if p.debug != nil {
+				p.debug.Printf("query faied, error:[%v]", err.Error())
+			}
+			return map[string]map[string]string{}, err
 		}
-		return map[string]map[string]string{}, err
+	} else {
+		stmt, err := p.db.Prepare(dbq)
+		if err != nil {
+			if p.debug != nil {
+				p.debug.Printf("query faied, error:[%v]", err.Error())
+			}
+			return map[string]map[string]string{}, err
+		}
+
+		query, err = stmt.Query(value...)
+		stmt.Close()
+		if err != nil {
+			if p.debug != nil {
+				p.debug.Printf("query faied, error:[%v]", err.Error())
+			}
+			return map[string]map[string]string{}, err
+		}
 	}
 	return handleQD(query, p.debug)
 }
