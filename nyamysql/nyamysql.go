@@ -25,9 +25,9 @@ func (p *NyaMySQL) QueryDataCMD(sql string, value ...[]interface{}) (map[string]
 	sqls := strings.Split(sql, ";")
 	for i, v := range sqls {
 		if p.debug != nil {
-			p.debug.Println("\n" + dbPrintStr(v, value[i]))
+			p.debug.Println("[QueryDataCMD]", dbPrintStr(v, value[i]))
 		} else {
-			fmt.Println("[QueryData]", dbPrintStr(v, value[i]))
+			log.Println("[QueryDataCMD]", dbPrintStr(v, value[i]))
 		}
 		if value == nil {
 			if i+1 == len(sqls) {
@@ -108,9 +108,9 @@ func (p *NyaMySQL) QueryData(recn string, table string, where string, orderby st
 		dbq += " limit " + p.limit
 	}
 	if p.debug != nil {
-		p.debug.Println("\n" + dbPrintStr(dbq, value))
+		p.debug.Println("[QueryData]", dbPrintStr(dbq, value))
 	} else {
-		fmt.Println("[QueryData]", dbPrintStr(dbq, value))
+		log.Println("[QueryData]", dbPrintStr(dbq, value))
 	}
 	var (
 		query *sql.Rows
@@ -180,9 +180,9 @@ func (p *NyaMySQL) AddRecord(table string, key []string, values ...interface{}) 
 	}
 	dbq += valuesStr + ")"
 	if p.debug != nil {
-		p.debug.Println("\n" + dbPrintStr(dbq, values))
+		p.debug.Println("[AddRecord]", dbPrintStr(dbq, values))
 	} else {
-		fmt.Println("[AddRecord]", dbPrintStr(dbq, values))
+		log.Println("[AddRecord]", dbPrintStr(dbq, values))
 	}
 
 	stmt, err := p.db.Prepare(dbq)
@@ -228,9 +228,9 @@ func (p *NyaMySQL) UpdateRecord(table string, updata string, where string, value
 		dbq += " where " + where
 	}
 	if p.debug != nil {
-		p.debug.Println("\n" + dbPrintStr(dbq, values))
+		p.debug.Println("[UpdataRecord]", dbPrintStr(dbq, values))
 	} else {
-		fmt.Println("[UpdataRecord]", dbPrintStr(dbq, values))
+		log.Println("[UpdataRecord]", dbPrintStr(dbq, values))
 	}
 
 	stmt, err := p.db.Prepare(dbq)
@@ -290,9 +290,9 @@ func (p *NyaMySQL) DeleteRecord(table string, key string, and string, values ...
 	}
 	//删除uid=2的数据
 	if p.debug != nil {
-		p.debug.Println("\n" + dbPrintStr(dbq, values))
+		p.debug.Println("[DeleteRecord]", dbPrintStr(dbq, values))
 	} else {
-		fmt.Println("[DeleteRecord]", dbPrintStr(dbq, values))
+		log.Println("[DeleteRecord]", dbPrintStr(dbq, values))
 	}
 	stmt, err := p.db.Prepare(dbq)
 	if err != nil {
@@ -344,9 +344,9 @@ func (p *NyaMySQL) DeleteRecordNoPK(table string, keys []string, values ...inter
 
 	//删除uid=2的数据
 	if p.debug != nil {
-		p.debug.Println("\n" + dbPrintStr(dbq, values))
+		p.debug.Println("[DeleteRecordNoPK]", dbPrintStr(dbq, values))
 	} else {
-		fmt.Println("[DeleteRecordNoPK]", dbPrintStr(dbq, values))
+		log.Println("[DeleteRecordNoPK]", dbPrintStr(dbq, values))
 	}
 
 	stmt, err := p.db.Prepare(dbq)
@@ -384,9 +384,9 @@ func (p *NyaMySQL) DeleteRecordNoPK(table string, keys []string, values ...inter
 //	}
 func (p *NyaMySQL) FreequeryData(sqlstr string, values ...interface{}) (map[string]map[string]string, error) {
 	if p.debug != nil {
-		p.debug.Println("\n" + dbPrintStr(sqlstr, values))
+		p.debug.Println("[FreequeryData]", dbPrintStr(sqlstr, values))
 	} else {
-		fmt.Println("[FreequeryData]", dbPrintStr(sqlstr, values))
+		log.Println("[FreequeryData]", dbPrintStr(sqlstr, values))
 	}
 	stmt, err := p.db.Prepare(sqlstr)
 	if err != nil {
@@ -436,7 +436,7 @@ func (p *NyaMySQL) FreequeryData(sqlstr string, values ...interface{}) (map[stri
 
 	//关闭结果集（释放连接）
 	query.Close()
-	// fmt.Println("-----====-----")
+	// log.Println("-----====-----")
 
 	return results, nil
 }
@@ -475,7 +475,7 @@ func handleQD(query *sql.Rows, Deubg *log.Logger) (map[string]map[string]string,
 
 	//关闭结果集（释放连接）
 	query.Close()
-	// fmt.Println("-----====-----")
+	// log.Println("-----====-----")
 
 	return results, nil
 }
