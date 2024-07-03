@@ -143,6 +143,33 @@ func (p *NyaRedis) SetString(key string, val string, options ...OptionConfig) bo
 	return p.err == nil
 }
 
+// GetValTime: 從資料庫中取出字串值
+//
+//	`key`  string 資料名稱
+//	`options` ...OptionConfig 可選配置，執行 `Option_*` 函式輸入
+//		`isDelete` bool 是否在查詢完成後刪除此條目，預設值 `false`
+//	return
+//		time.Duration 取出的資料時間。如果不成功則返回空時間，可使用 `Error()` 或 `ErrorString()` 檢查是否發生錯誤或獲取錯誤資訊
+func (p *NyaRedis) GetTTL(key string, options ...OptionConfig) time.Duration {
+	option := &Option{isDelete: false}
+	for _, o := range options {
+		o(option)
+	}
+
+	ttl, err := p.db.TTL(ctx, key).Result()
+	p.err = err
+	if err != nil {
+		return ttl
+	}
+	if option.isDelete {
+		p.err = p.db.Del(ctx, key).Err()
+		if p.err != nil {
+			return ttl
+		}
+	}
+	return ttl
+}
+
 // GetString: 從資料庫中取出字串值
 //
 //	`key`  string 資料名稱
@@ -166,6 +193,40 @@ func (p *NyaRedis) GetString(key string, options ...OptionConfig) string {
 		}
 	}
 	return val
+}
+
+// GetValTime: 從資料庫中取出字串值
+//
+//	`key`  string 資料名稱
+//	`options` ...OptionConfig 可選配置，執行 `Option_*` 函式輸入
+//		`isDelete` bool 是否在查詢完成後刪除此條目，預設值 `false`
+//	return
+//		string 取出的字串。如果不成功則返回空字串，可使用 `Error()` 或 `ErrorString()` 檢查是否發生錯誤或獲取錯誤資訊
+//		time.Duration 取出的資料時間。如果不成功則返回空時間，可使用 `Error()` 或 `ErrorString()` 檢查是否發生錯誤或獲取錯誤資訊
+func (p *NyaRedis) GetStringAndTTL(key string, options ...OptionConfig) (string, time.Duration) {
+	option := &Option{isDelete: false}
+	for _, o := range options {
+		o(option)
+	}
+
+	var ttl time.Duration
+	val, err := p.db.Get(ctx, key).Result()
+	p.err = err
+	if err != nil {
+		return "", ttl
+	}
+	ttl, err = p.db.TTL(ctx, key).Result()
+	p.err = err
+	if err != nil {
+		return "", ttl
+	}
+	if option.isDelete {
+		p.err = p.db.Del(ctx, key).Err()
+		if p.err != nil {
+			return val, ttl
+		}
+	}
+	return val, ttl
 }
 
 // GetStringAll: 從資料庫中批次取出字串值
