@@ -15,6 +15,7 @@ func Test(t *testing.T) {
 	// 使用 recorder 作为 ResponseWriter
 	// 例如，传递给一个处理函数
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		SetMsgIDSplitString("%")
 		backMessageByte := AlertInfoJsonKV(w, 2, 1.1, 9001, "", "test")
 		fmt.Println(string(backMessageByte))
 	})

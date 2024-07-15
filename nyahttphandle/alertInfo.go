@@ -20,10 +20,17 @@ id,en,chs,cht  //第一行確定語言列表, id標記用可以是任意字串�
 引號和逗號的處理遵循 CSV 檔案格式的語法。部分電子表格軟體可能儲存為非 UTF-8 編碼和非 LF 換行符，注意這些軟體儲存後可能需要轉換。
 */
 
-var alertinfo [][]string = [][]string{}      // 提示資訊文字庫
-var alertinfoLanguages []string = []string{} // 語言碼列表
-var alertinfoLanguageLen int = 0             // 支援的語言數量
-var alertinfoMaxID int = 0                   // 最大碼值
+var (
+	alertinfo            [][]string = [][]string{} // 提示資訊文字庫
+	alertinfoLanguages   []string   = []string{}   // 語言碼列表
+	alertinfoLanguageLen int        = 0            // 支援的語言數量
+	alertinfoMaxID       int        = 0            // 最大碼值
+	splitStr                        = "-"          // 分割字符串
+)
+
+func SetMsgIDSplitString(splitString string) {
+	splitStr = splitString
+}
 
 // alertInfoTemplateLoad 載入語言配置檔案（请先执行该函数再继续使用 AlertInfoJson(KV)(M) ）
 //
@@ -101,7 +108,7 @@ func AlertinfoLanguageList() []string {
 //	return		string	取出的文字
 //	示例：配置檔案第一行為 `id,en,chs`, 第二行為 `200,OK,成功` 時：
 //	AlertInfoJson(1, 200) -> {"code":"200","msg":"OK"}
-func AlertInfoJson(w http.ResponseWriter, languageID int, respID string, massageID int) []byte {
+func AlertInfoJson(w http.ResponseWriter, languageID int, respID interface{}, massageID int) []byte {
 	return AlertInfoJsonKV(w, languageID, respID, massageID, "", "")
 }
 
@@ -137,7 +144,7 @@ func AlertInfoJsonKV(w http.ResponseWriter, languageID int, respID interface{}, 
 func AlertInfoJsonGenMap(languageID int, respID interface{}, massageID int) (int, map[string]interface{}) {
 	code, massageText := AlertInfoGet(languageID, massageID)
 	return code, map[string]interface{}{
-		"code": fmt.Sprintf("%v.%d", respID, massageID),
+		"code": fmt.Sprintf("%v%s%d", respID, splitStr, massageID),
 		"msg":  massageText,
 	}
 }
