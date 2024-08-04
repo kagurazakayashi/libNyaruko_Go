@@ -23,15 +23,13 @@ var (
 type LogLevel int8
 
 const (
-	timeZoneDefaultName  string   = "Asia/Shanghai"
-	timeZoneDefaultFixed int      = 8
-	LogLevelDebug        LogLevel = 0
-	LogLevelInfo         LogLevel = 1
-	LogLevelOK           LogLevel = 2
-	LogLevelWarning      LogLevel = 3
-	LogLevelError        LogLevel = 4
-	LogLevelClash        LogLevel = 5
-	LogLevelNone         LogLevel = 6
+	LogLevelDebug   LogLevel = 0
+	LogLevelInfo    LogLevel = 1
+	LogLevelOK      LogLevel = 2
+	LogLevelWarning LogLevel = 3
+	LogLevelError   LogLevel = 4
+	LogLevelClash   LogLevel = 5
+	LogLevelNone    LogLevel = 6
 )
 
 // Log: 向終端輸出日誌
@@ -135,7 +133,7 @@ func logPrefix(level LogLevel) string {
 	if timeZone == nil {
 		timeZoneN, err := GetTimeZone("", -100)
 		if err != nil {
-			timeZone, _ = GetTimeZone(timeZoneDefaultName, timeZoneDefaultFixed)
+			timeZone = time.UTC
 		} else {
 			timeZone = timeZoneN
 		}
@@ -245,7 +243,7 @@ func formatJSON(data string) string {
 func GetTimeZone(zone string, fixedZone int) (timeZoneN *time.Location, err error) {
 	if zone == "" {
 		if fixedZone < -12 || fixedZone > 12 {
-			return nil, fmt.Errorf("fixedZone need -12 ~ 12")
+			return nil, fmt.Errorf("fixedZone: -12 ~ 12")
 		} else {
 			timeZoneN = time.FixedZone("CST", fixedZone*3600)
 		}
