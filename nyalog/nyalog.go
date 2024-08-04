@@ -17,45 +17,50 @@ import (
 )
 
 var (
-	timeZone             *time.Location
-	timeZoneDefaultName  string = "Asia/Shanghai"
-	timeZoneDefaultFixed int    = 8
+	timeZone *time.Location
 )
 
 type LogLevel int8
 
 const (
-	LogLevelDebug   LogLevel = 0
-	LogLevelInfo    LogLevel = 1
-	LogLevelWarning LogLevel = 2
-	LogLevelError   LogLevel = 3
-	LogLevelClash   LogLevel = 4
-	LogLevelOK      LogLevel = 5
+	timeZoneDefaultName  string   = "Asia/Shanghai"
+	timeZoneDefaultFixed int      = 8
+	LogLevelDebug        LogLevel = 0
+	LogLevelInfo         LogLevel = 1
+	LogLevelOK           LogLevel = 2
+	LogLevelWarning      LogLevel = 3
+	LogLevelError        LogLevel = 4
+	LogLevelClash        LogLevel = 5
+	LogLevelNone         LogLevel = 6
 )
 
-//Log: 向終端輸出日誌
-//	`level` LogLevel 日誌等級
+// Log: 向終端輸出日誌
+//
+//	`level` LogLevel 日誌等級 (0-5)
 //	`obj` ...interface{} 要輸出的變數（會自動嘗試轉換成字串）
 //	日誌输出示例: "[E 2022-03-11 15:04:05 main.main:18] ERROR"
 func Log(level LogLevel, obj ...interface{}) {
 	fmt.Println(logString(level, obj))
 }
 
-//LogD: 用於除錯時快速找到臨時性輸出，以紫色底色輸出
+// LogD: 用於除錯時快速找到臨時性輸出，以紫色底色輸出
+//
 //	`obj` ...interface{} 要輸出的變數（會自動嘗試轉換成字串）
 func LogD(obj ...interface{}) {
 	ColorOutput.Colorful.WithFrontColor(ConsoleColorWhite.String()).WithBackColor(ConsoleColorPurple.String()).Println(strings.Join(interfaceArray2StringArray(obj), " "))
 }
 
-//LogF: 向終端輸出日誌，並將日誌內容寫入到檔案，路徑為 `當前執行檔案.log` 。
-//	`level` LogLevel 日誌等級
+// LogF: 向終端輸出日誌，並將日誌內容寫入到檔案，路徑為 `當前執行檔案.log` 。
+//
+//	`level` LogLevel 日誌等級 (0-5)
 //	`obj` ...interface{} 要輸出的變數（會自動嘗試轉換成字串）
 func LogF(level LogLevel, obj ...interface{}) {
 	LogFF(level, "", obj...)
 }
 
-//LogFF: 向終端輸出日誌，並將日誌內容寫入到指定自定義檔案。
-//	`level` LogLevel 日誌等級
+// LogFF: 向終端輸出日誌，並將日誌內容寫入到指定自定義檔案。
+//
+//	`level` LogLevel 日誌等級 (0-5)
 //	`path`  string   日誌檔案路徑
 //	`obj` ...interface{} 要輸出的變數（會自動嘗試轉換成字串）
 func LogFF(level LogLevel, path string, obj ...interface{}) {
@@ -79,8 +84,9 @@ func LogFF(level LogLevel, path string, obj ...interface{}) {
 	fd.Close()
 }
 
-//LogC: 向終端輸出日誌，根據日誌等級自動決定輸出顏色
-//	`level` LogLevel 日誌等級
+// LogC: 向終端輸出日誌，根據日誌等級自動決定輸出顏色
+//
+//	`level` LogLevel 日誌等級 (0-5)
 //	`obj` ...interface{} 要輸出的變數（會自動嘗試轉換成字串）
 func LogC(level LogLevel, obj ...interface{}) {
 	var colorStr string = LogLevelData(level).String()
@@ -88,7 +94,8 @@ func LogC(level LogLevel, obj ...interface{}) {
 	ColorOutput.Colorful.WithFrontColor(colorStr).Println(logStr)
 }
 
-//LogCC: 向終端輸出日誌，並指定輸出顏色
+// LogCC: 向終端輸出日誌，並指定輸出顏色
+//
 //	`level` LogLevel     日誌等級
 //	`color` ConsoleColor 文字顏色
 //	`obj` ...interface{} 要輸出的變數（會自動嘗試轉換成字串）
@@ -97,7 +104,8 @@ func LogCC(level LogLevel, color ConsoleColor, obj ...interface{}) {
 	ColorOutput.Colorful.WithFrontColor(color.String()).Println(logStr)
 }
 
-//LogCCC: 向終端輸出日誌，並指定輸出前景顏色和背景顏色
+// LogCCC: 向終端輸出日誌，並指定輸出前景顏色和背景顏色
+//
 //	`level`           LogLevel     日誌等級
 //	`color`           ConsoleColor 文字顏色
 //	`backgroundColor` ConsoleColor 文字底色
@@ -107,8 +115,9 @@ func LogCCC(level LogLevel, color ConsoleColor, backgroundColor ConsoleColor, ob
 	ColorOutput.Colorful.WithFrontColor(color.String()).WithBackColor(backgroundColor.String()).Println(logStr)
 }
 
-//logString 将输入的参数组装成字符串
-//	`level` LogLevel 日誌等級
+// logString 将输入的参数组装成字符串
+//
+//	`level` LogLevel 日誌等級 (0-5)
 //	`obj` ...interface{} 要輸出的變數（會自動嘗試轉換成字串）
 //	return string    準備輸出的字串
 func logString(level LogLevel, obj []interface{}) string {
@@ -117,24 +126,31 @@ func logString(level LogLevel, obj []interface{}) string {
 	return prefix + strings.Join(infoArr, " ")
 }
 
-//prefix: 日誌輸出字首
-//	`level` LogLevel 日誌等級
+// prefix: 日誌輸出字首
+//
+//	`level` LogLevel 日誌等級 (0-5)
 //	return  []string 字首字串單元陣列
-//	[日誌等級字元, 日期時間, 函式名稱:行號]
+//	[日誌等級字元, 日期時間]
 func logPrefix(level LogLevel) string {
 	if timeZone == nil {
-		timeZone = GetTimeZone("", -100)
+		timeZoneN, err := GetTimeZone("", -100)
+		if err != nil {
+			timeZone, _ = GetTimeZone(timeZoneDefaultName, timeZoneDefaultFixed)
+		} else {
+			timeZone = timeZoneN
+		}
 	}
 	var s [2]string = [2]string{"[", "]"}
 	var ExArr []string = []string{
 		s[0] + level.String() + s[1],
 		s[0] + timeStamp2timeString(0) + s[1],
-		s[0] + logFuncInfo() + s[1],
+		// s[0] + logFuncInfo() + s[1],
 	}
-	return strings.Join(ExArr, "")
+	return strings.Join(ExArr, "") + " "
 }
 
-//interfaceArray2StringArray: 將泛型別陣列轉換為字串陣列
+// interfaceArray2StringArray: 將泛型別陣列轉換為字串陣列
+//
 //	`objs` []interface{} 泛型別陣列
 //	return []string      字串陣列
 func interfaceArray2StringArray(objs []interface{}) []string {
@@ -149,9 +165,10 @@ func interfaceArray2StringArray(objs []interface{}) []string {
 	return strArr
 }
 
-//logFuncInfo: 獲取當前程式碼行號、函式名稱
+// logFuncInfo: 獲取當前程式碼行號、函式名稱
+//
 //	return string 函式名稱:行號
-func logFuncInfo() string {
+func FuncInfo() string {
 	pc, _, line, ok := runtime.Caller(2)
 	if !ok {
 		return ""
@@ -160,7 +177,8 @@ func logFuncInfo() string {
 	return f.Name() + ":" + strconv.Itoa(line)
 }
 
-//toString: 將各種資料型別轉換為字串
+// toString: 將各種資料型別轉換為字串
+//
 //	`v`    interface{} 字串、位元組、數字，以及包含上述值的陣列
 //	return string      zhuanhuanh
 func ToString(v interface{}) string {
@@ -168,44 +186,45 @@ func ToString(v interface{}) string {
 	if v == nil {
 		return s
 	}
-	switch v.(type) {
+	switch t := v.(type) {
 	case string:
-		return v.(string)
+		s = t
 	case float64:
-		s = strconv.FormatFloat(v.(float64), 'f', -1, 64)
+		s = strconv.FormatFloat(t, 'f', -1, 64)
 	case float32:
-		s = strconv.FormatFloat(float64(v.(float32)), 'f', -1, 64)
+		s = strconv.FormatFloat(float64(t), 'f', -1, 64)
 	case int:
-		s = strconv.Itoa(v.(int))
+		s = strconv.Itoa(t)
 	case uint:
-		s = strconv.Itoa(int(v.(uint)))
+		s = strconv.Itoa(int(t))
 	case int8:
-		s = strconv.Itoa(int(v.(int8)))
+		s = strconv.Itoa(int(t))
 	case uint8:
-		s = strconv.Itoa(int(v.(uint8)))
+		s = strconv.Itoa(int(t))
 	case int16:
-		s = strconv.Itoa(int(v.(int16)))
+		s = strconv.Itoa(int(t))
 	case uint16:
-		s = strconv.Itoa(int(v.(uint16)))
+		s = strconv.Itoa(int(t))
 	case int32:
-		s = strconv.Itoa(int(v.(int32)))
+		s = strconv.Itoa(int(t))
 	case uint32:
-		s = strconv.Itoa(int(v.(uint32)))
+		s = strconv.Itoa(int(t))
 	case int64:
-		s = strconv.FormatInt(v.(int64), 10)
+		s = strconv.FormatInt(t, 10)
 	case uint64:
-		s = strconv.FormatUint(v.(uint64), 10)
+		s = strconv.FormatUint(t, 10)
 	case []byte:
-		s = string(v.([]byte))
+		s = string(t)
 	default:
-		newValue, _ := json.Marshal(v)
+		newValue, _ := json.Marshal(t)
 		s = string(newValue)
 		s = formatJSON(s)
 	}
 	return s
 }
 
-//JSON: 格式化 JSON ，最佳化輸出的易讀性
+// JSON: 格式化 JSON ，最佳化輸出的易讀性
+//
 //	`data` string 源 JSON 字符串
 //	return string 美化后的 JSON 字符串
 func formatJSON(data string) string {
@@ -217,7 +236,8 @@ func formatJSON(data string) string {
 	return str.String()
 }
 
-//GetTimeZone: 設定和獲取當前時區。
+// GetTimeZone: 設定和獲取當前時區。
+//
 //	优先判断`zone`是否为""
 //	`zone`     string 時區字串，如 "Asia/Shanghai" 。提供空字串則採用變數 timeZoneDefaultName 。
 //	`fixedZone` int    根據 CST 加減小時數補償，範圍 -12 ~ 12 ，提供超範圍數值則採用變數 timeZoneDefaultFixed 。該項只在從系統獲取 zone 失敗後有效。
@@ -225,7 +245,7 @@ func formatJSON(data string) string {
 func GetTimeZone(zone string, fixedZone int) (timeZoneN *time.Location, err error) {
 	if zone == "" {
 		if fixedZone < -12 || fixedZone > 12 {
-			return nil, fmt.Errorf("fixedZone範圍应为-12 ~ 12")
+			return nil, fmt.Errorf("fixedZone need -12 ~ 12")
 		} else {
 			timeZoneN = time.FixedZone("CST", fixedZone*3600)
 		}
@@ -238,7 +258,8 @@ func GetTimeZone(zone string, fixedZone int) (timeZoneN *time.Location, err erro
 	return timeZoneN, nil
 }
 
-//timeStamp2timeString: 從時間戳獲取當前時間字串
+// timeStamp2timeString: 從時間戳獲取當前時間字串
+//
 //	`timestamp` int64  納秒時間戳，如果為 0 則提供當前時間字串
 //	return      string 時間字串，格式 `yyyy-MM-dd HH:mm:ss`
 func timeStamp2timeString(timestamp int64) string {
