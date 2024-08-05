@@ -34,11 +34,15 @@ const (
 
 // Log: 向終端輸出日誌
 //
-//	`level` LogLevel 日誌等級 (0-5)
+//	`setLevel` LogLevel 設定的日誌等級 (0-6)
+//	`nowLevel` LogLevel 當前輸出的日誌等級 (0-5)
 //	`obj` ...interface{} 要輸出的變數（會自動嘗試轉換成字串）
 //	日誌输出示例: "[E 2022-03-11 15:04:05 main.main:18] ERROR"
-func Log(level LogLevel, obj ...interface{}) {
-	fmt.Println(logString(level, obj))
+func Log(setLevel LogLevel, nowLevel LogLevel, obj ...interface{}) {
+	if nowLevel < setLevel {
+		return
+	}
+	fmt.Println(logString(nowLevel, obj))
 }
 
 // LogD: 用於除錯時快速找到臨時性輸出，以紫色底色輸出
@@ -50,19 +54,27 @@ func LogD(obj ...interface{}) {
 
 // LogF: 向終端輸出日誌，並將日誌內容寫入到檔案，路徑為 `當前執行檔案.log` 。
 //
-//	`level` LogLevel 日誌等級 (0-5)
+//	`setLevel` LogLevel 設定的日誌等級 (0-6)
+//	`nowLevel` LogLevel 當前輸出的日誌等級 (0-5)
 //	`obj` ...interface{} 要輸出的變數（會自動嘗試轉換成字串）
-func LogF(level LogLevel, obj ...interface{}) {
-	LogFF(level, "", obj...)
+func LogF(setLevel LogLevel, nowLevel LogLevel, obj ...interface{}) {
+	if nowLevel < setLevel {
+		return
+	}
+	LogFF(setLevel, nowLevel, "", obj...)
 }
 
 // LogFF: 向終端輸出日誌，並將日誌內容寫入到指定自定義檔案。
 //
-//	`level` LogLevel 日誌等級 (0-5)
+//	`setLevel` LogLevel 設定的日誌等級 (0-6)
+//	`nowLevel` LogLevel 當前輸出的日誌等級 (0-5)
 //	`path`  string   日誌檔案路徑
 //	`obj` ...interface{} 要輸出的變數（會自動嘗試轉換成字串）
-func LogFF(level LogLevel, path string, obj ...interface{}) {
-	var logStr string = logString(level, obj)
+func LogFF(setLevel LogLevel, nowLevel LogLevel, path string, obj ...interface{}) {
+	if nowLevel < setLevel {
+		return
+	}
+	var logStr string = logString(nowLevel, obj)
 	var logPath string = path
 	if len(path) == 0 {
 		fmt.Println(logStr)
@@ -84,32 +96,44 @@ func LogFF(level LogLevel, path string, obj ...interface{}) {
 
 // LogC: 向終端輸出日誌，根據日誌等級自動決定輸出顏色
 //
-//	`level` LogLevel 日誌等級 (0-5)
+//	`setLevel` LogLevel 設定的日誌等級 (0-6)
+//	`nowLevel` LogLevel 當前輸出的日誌等級 (0-5)
 //	`obj` ...interface{} 要輸出的變數（會自動嘗試轉換成字串）
-func LogC(level LogLevel, obj ...interface{}) {
-	var colorStr string = LogLevelData(level).String()
-	var logStr string = logString(level, obj)
+func LogC(setLevel LogLevel, nowLevel LogLevel, obj ...interface{}) {
+	if nowLevel < setLevel {
+		return
+	}
+	var colorStr string = LogLevelData(nowLevel).String()
+	var logStr string = logString(nowLevel, obj)
 	ColorOutput.Colorful.WithFrontColor(colorStr).Println(logStr)
 }
 
 // LogCC: 向終端輸出日誌，並指定輸出顏色
 //
-//	`level` LogLevel     日誌等級
+//	`setLevel` LogLevel 設定的日誌等級 (0-6)
+//	`nowLevel` LogLevel 當前輸出的日誌等級 (0-5)
 //	`color` ConsoleColor 文字顏色
 //	`obj` ...interface{} 要輸出的變數（會自動嘗試轉換成字串）
-func LogCC(level LogLevel, color ConsoleColor, obj ...interface{}) {
-	var logStr string = logString(level, obj)
+func LogCC(setLevel LogLevel, nowLevel LogLevel, color ConsoleColor, obj ...interface{}) {
+	if nowLevel < setLevel {
+		return
+	}
+	var logStr string = logString(nowLevel, obj)
 	ColorOutput.Colorful.WithFrontColor(color.String()).Println(logStr)
 }
 
 // LogCCC: 向終端輸出日誌，並指定輸出前景顏色和背景顏色
 //
-//	`level`           LogLevel     日誌等級
+//	`setLevel` LogLevel 設定的日誌等級 (0-6)
+//	`nowLevel` LogLevel 當前輸出的日誌等級 (0-5)
 //	`color`           ConsoleColor 文字顏色
 //	`backgroundColor` ConsoleColor 文字底色
 //	`obj` ...interface{} 要輸出的變數（會自動嘗試轉換成字串）
-func LogCCC(level LogLevel, color ConsoleColor, backgroundColor ConsoleColor, obj ...interface{}) {
-	var logStr string = logString(level, obj)
+func LogCCC(setLevel LogLevel, nowLevel LogLevel, color ConsoleColor, backgroundColor ConsoleColor, obj ...interface{}) {
+	if nowLevel < setLevel {
+		return
+	}
+	var logStr string = logString(nowLevel, obj)
 	ColorOutput.Colorful.WithFrontColor(color.String()).WithBackColor(backgroundColor.String()).Println(logStr)
 }
 
