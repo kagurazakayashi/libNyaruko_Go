@@ -4,14 +4,14 @@ package nyalog
 type ConsoleColor int8
 
 const (
-	ConsoleColorBlack  ConsoleColor = 0
-	ConsoleColorRed    ConsoleColor = 1
-	ConsoleColorGreen  ConsoleColor = 2
-	ConsoleColorYellow ConsoleColor = 3
-	ConsoleColorBlue   ConsoleColor = 4
-	ConsoleColorPurple ConsoleColor = 5
-	ConsoleColorCyan   ConsoleColor = 6
-	ConsoleColorWhite  ConsoleColor = 7
+	Black  ConsoleColor = 0
+	Red    ConsoleColor = 1
+	Green  ConsoleColor = 2
+	Yellow ConsoleColor = 3
+	Blue   ConsoleColor = 4
+	Purple ConsoleColor = 5
+	Cyan   ConsoleColor = 6
+	White  ConsoleColor = 7
 )
 
 // 將 ConsoleColor 物件轉換為顏色字串
@@ -32,21 +32,21 @@ func (p LogLevel) String() string {
 //	return  顏色
 func LogLevelData(lvl LogLevel) ConsoleColor {
 	switch lvl {
-	case LogLevelDebug:
-		return ConsoleColorWhite
-	case LogLevelInfo:
-		return ConsoleColorCyan
-	case LogLevelOK:
-		return ConsoleColorGreen
-	case LogLevelWarning:
-		return ConsoleColorYellow
-	case LogLevelError:
-		return ConsoleColorRed
-	case LogLevelClash:
-		return ConsoleColorRed
-	case LogLevelNone:
-		return ConsoleColorBlack
+	case Debug: //0
+		return White
+	case Info: //1
+		return Cyan
+	case OK: //2
+		return Green
+	case Warning: //3
+		return Yellow
+	case Error: //4
+		return Red
+	case Clash: //5
+		return Red
+	case None: //6
+		return Black
 	default:
-		return ConsoleColorCyan
+		return Cyan
 	}
 }

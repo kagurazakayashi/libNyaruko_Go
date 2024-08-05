@@ -23,13 +23,13 @@ var (
 type LogLevel int8
 
 const (
-	LogLevelDebug   LogLevel = 0
-	LogLevelInfo    LogLevel = 1
-	LogLevelOK      LogLevel = 2
-	LogLevelWarning LogLevel = 3
-	LogLevelError   LogLevel = 4
-	LogLevelClash   LogLevel = 5
-	LogLevelNone    LogLevel = 6
+	Debug   LogLevel = 0
+	Info    LogLevel = 1
+	OK      LogLevel = 2
+	Warning LogLevel = 3
+	Error   LogLevel = 4
+	Clash   LogLevel = 5
+	None    LogLevel = 6
 )
 
 // Log: 向終端輸出日誌
@@ -49,7 +49,7 @@ func Log(setLevel LogLevel, nowLevel LogLevel, obj ...interface{}) {
 //
 //	`obj` ...interface{} 要輸出的變數（會自動嘗試轉換成字串）
 func LogD(obj ...interface{}) {
-	ColorOutput.Colorful.WithFrontColor(ConsoleColorWhite.String()).WithBackColor(ConsoleColorPurple.String()).Println(strings.Join(interfaceArray2StringArray(obj), " "))
+	ColorOutput.Colorful.WithFrontColor(White.String()).WithBackColor(Purple.String()).Println(strings.Join(interfaceArray2StringArray(obj), " "))
 }
 
 // LogF: 向終端輸出日誌，並將日誌內容寫入到檔案，路徑為 `當前執行檔案.log` 。
