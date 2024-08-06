@@ -12,8 +12,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/phprao/ColorOutput"
 )
 
 var (
@@ -42,14 +40,14 @@ func Log(setLevel LogLevel, nowLevel LogLevel, obj ...interface{}) {
 	if nowLevel < setLevel {
 		return
 	}
-	fmt.Println(logString(nowLevel, obj))
+	fmt.Fprintln(os.Stderr, logString(nowLevel, obj))
 }
 
 // LogD: 用於除錯時快速找到臨時性輸出，以紫色底色輸出
 //
 //	`obj` ...interface{} 要輸出的變數（會自動嘗試轉換成字串）
 func LogD(obj ...interface{}) {
-	ColorOutput.Colorful.WithFrontColor(White.String()).WithBackColor(Purple.String()).Println(strings.Join(interfaceArray2StringArray(obj), " "))
+	Colorful.WithFrontColor(White.String()).WithBackColor(Purple.String()).Println(strings.Join(interfaceArray2StringArray(obj), " "))
 }
 
 // LogF: 向終端輸出日誌，並將日誌內容寫入到檔案，路徑為 `當前執行檔案.log` 。
@@ -77,7 +75,7 @@ func LogFF(setLevel LogLevel, nowLevel LogLevel, path string, obj ...interface{}
 	var logStr string = logString(nowLevel, obj)
 	var logPath string = path
 	if len(path) == 0 {
-		fmt.Println(logStr)
+		fmt.Fprintln(os.Stderr, logStr)
 		file, err := exec.LookPath(os.Args[0])
 		if err != nil {
 			return
@@ -105,7 +103,7 @@ func LogC(setLevel LogLevel, nowLevel LogLevel, obj ...interface{}) {
 	}
 	var colorStr string = LogLevelData(nowLevel).String()
 	var logStr string = logString(nowLevel, obj)
-	ColorOutput.Colorful.WithFrontColor(colorStr).Println(logStr)
+	Colorful.WithFrontColor(colorStr).Fprintln(os.Stderr, logStr)
 }
 
 // LogCC: 向終端輸出日誌，並指定輸出顏色
@@ -119,7 +117,7 @@ func LogCC(setLevel LogLevel, nowLevel LogLevel, color ConsoleColor, obj ...inte
 		return
 	}
 	var logStr string = logString(nowLevel, obj)
-	ColorOutput.Colorful.WithFrontColor(color.String()).Println(logStr)
+	Colorful.WithFrontColor(color.String()).Fprintln(os.Stderr, logStr)
 }
 
 // LogCCC: 向終端輸出日誌，並指定輸出前景顏色和背景顏色
@@ -134,7 +132,7 @@ func LogCCC(setLevel LogLevel, nowLevel LogLevel, color ConsoleColor, background
 		return
 	}
 	var logStr string = logString(nowLevel, obj)
-	ColorOutput.Colorful.WithFrontColor(color.String()).WithBackColor(backgroundColor.String()).Println(logStr)
+	Colorful.WithFrontColor(color.String()).WithBackColor(backgroundColor.String()).Fprintln(os.Stderr, logStr)
 }
 
 // logString 将输入的参数组装成字符串
@@ -267,7 +265,7 @@ func formatJSON(data string) string {
 func GetTimeZone(zone string, fixedZone int) (timeZoneN *time.Location, err error) {
 	if zone == "" {
 		if fixedZone < -12 || fixedZone > 12 {
-			return nil, fmt.Errorf("fixedZone: -12 ~ 12")
+			return nil, fmt.Errorf("E")
 		} else {
 			timeZoneN = time.FixedZone("CST", fixedZone*3600)
 		}

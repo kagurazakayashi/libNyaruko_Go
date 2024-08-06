@@ -1,10 +1,12 @@
 # libNyaruko_Go
+
 - 雅诗编程封装代码 libNyaruko ( Golang 版 )
   - 通用工具库，一些跨项目常用的代码会放在里面。
   - 分为单独的组件，可以按需引入。
   - (前端: [libNyaruko_TS](https://github.com/kagurazakayashi/libNyaruko_TS) )
 
 ## 组件
+
 - `nyacrypt`
   - 字符串或文件哈希计算与加密，随机数或随机字符串生成。
 - `nyahttphandle`
@@ -29,6 +31,7 @@
   - 提供多语言支持。
 
 ## 使用
+
 - 导入所需要功能所在的文件即可。例如：
   - 下载包: `go get github.com/kagurazakayashi/libNyaruko_Go/nyaredis`
   - 在代码中导入: `import nyaredis "github.com/kagurazakayashi/libNyaruko_Go/nyaredis"`
@@ -36,8 +39,10 @@
   - 可以使用 `nredis.任何代码中大写字母开头的函数` ，具体使用方式见 Wiki 或源码中每个函数的注释。
 
 ## 详细使用帮助
+
 参考 [Wiki](https://github.com/kagurazakayashi/libNyaruko_TS/wiki) ，在 Wiki 右侧的 Pages 点相关文件名即可了解。
 
 ## LICENSE
+
 - [木兰宽松许可证， 第2版](http://license.coscl.org.cn/MulanPSL2)
 - [Mulan Permissive Software License，Version 2 (Mulan PSL v2)](http://license.coscl.org.cn/MulanPSL2)
