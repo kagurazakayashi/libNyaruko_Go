@@ -6,6 +6,7 @@ package nyalog
 import (
 	"fmt"
 	"io"
+	"os"
 	"runtime"
 	"strings"
 	"syscall"
@@ -193,7 +194,7 @@ func (c ColorOutput) Println(str interface{}) {
 		// 背景色 | 前景色
 		// 注意，简单的或操作是错误的，比如 4 | 2，实际是 6 即 黄色，和预期的红底绿字不一致。
 		// 应该构成1个8位的二进制，前四位是背景色，后四位是前景色，因此背景色需要左移4位。
-		CmdPrint(str, (c.backColor<<4)|c.frontColor)
+		CmdPrint(os.Stdout, str, (c.backColor<<4)|c.frontColor)
 	}
 }
 
@@ -201,7 +202,7 @@ func (c ColorOutput) Fprintln(w io.Writer, str interface{}) {
 	if runtime.GOOS != "windows" {
 		fmt.Fprintf(w, "%c[%d;%d;%dm%s%c[0m\n", 0x1B, c.mode, c.backColor, c.frontColor, str, 0x1B)
 	} else {
-		CmdPrint(str, (c.backColor<<4)|c.frontColor)
+		CmdPrint(w, str, (c.backColor<<4)|c.frontColor)
 	}
 }
 
@@ -247,13 +248,19 @@ func (c ColorOutput) WithMode(mode int) ColorOutput {
 // https://docs.microsoft.com/zh-cn/windows/console/console-virtual-terminal-sequences
 // https://docs.microsoft.com/zh-cn/windows/console/console-virtual-terminal-sequences#samples
 
-func CmdPrint(s interface{}, i int) {
+func CmdPrint(w io.Writer, s interface{}, i int) {
 	if kernel32 == nil {
 		kernel32 = syscall.NewLazyDLL("kernel32.dll")
 	}
 	proc := kernel32.NewProc("SetConsoleTextAttribute")
-	handle, _, _ := proc.Call(uintptr(syscall.Stdout), uintptr(i))
-	fmt.Println(s)
+	var handle uintptr
+	if w == os.Stdout {
+		handle, _, _ = proc.Call(uintptr(syscall.Stdout), uintptr(i))
+	} else {
+		handle, _, _ = proc.Call(uintptr(syscall.Stderr), uintptr(i))
+	}
+	fmt.Fprintf(w, "%v\n", s)
+	// fmt.Println(s)
 	// handle, _, _ = proc.Call(uintptr(syscall.Stdout), uintptr(7))
 	CloseHandle := kernel32.NewProc("CloseHandle")
 	CloseHandle.Call(handle)
