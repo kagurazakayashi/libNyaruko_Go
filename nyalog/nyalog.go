@@ -135,6 +135,11 @@ func LogCCC(setLevel LogLevel, nowLevel LogLevel, color ConsoleColor, background
 	Colorful.WithFrontColor(color.String()).WithBackColor(backgroundColor.String()).Fprintln(os.Stderr, logStr)
 }
 
+// LogE: 重置終端顏色
+func ResetColorE() {
+	ResetColor(os.Stderr)
+}
+
 // logString 将输入的参数组装成字符串
 //
 //	`level` LogLevel 日誌等級 (0-5)

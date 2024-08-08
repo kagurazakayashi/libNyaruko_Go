@@ -14,6 +14,60 @@ const (
 	White  ConsoleColor = 7
 )
 
+// Bash 前景色
+const (
+	FrontBlack  = iota + 30 // 30黑色
+	FrontRed                // 31紅色
+	FrontGreen              // 32綠色
+	FrontYellow             // 33黃色
+	FrontBlue               // 34藍色
+	FrontPurple             // 35紫紅色
+	FrontCyan               // 36青藍色
+	FrontWhite              // 37白色
+)
+
+// Bash 背景色
+const (
+	BackBlack  = iota + 40 // 40黑色
+	BackRed                // 41紅色
+	BackGreen              // 42綠色
+	BackYellow             // 43黃色
+	BackBlue               // 44藍色
+	BackPurple             // 45紫紅色
+	BackCyan               // 46青藍色
+	BackWhite              // 47白色
+)
+
+// Bash 顯示模式
+const (
+	ModeDefault   = 0 // 終端預設設定
+	ModeHighLight = 1 // 高亮顯示
+	ModeLine      = 4 // 使用下劃線
+	ModeFlash     = 5 // 閃爍
+	ModeReWhite   = 6 // 反白顯示
+	ModeHidden    = 7 // 不可見
+)
+
+// CMD
+const (
+	CmdBlack       = iota // 0黑色
+	CmdBlue               // 1藍色
+	CmdGreen              // 2綠色
+	CmdAqua               // 3淺綠色
+	CmdRed                // 4红色
+	CmdPurple             // 5紫色
+	CmdYellow             // 6黃色
+	CmdWhite              // 7白色
+	CmdGray               // 8灰色
+	CmdLightBlue          // 9淡藍色
+	CmdLightGreen         // A淡綠色
+	CmdLightAqua          // B淡淺綠色
+	CmdLightRed           // C淡紅色
+	CmdLightPurple        // D淡紫色
+	CmdLightYellow        // E淡黃色
+	CmdBrightWhite        // F亮白色
+)
+
 // 將 ConsoleColor 物件轉換為顏色字串
 func (p ConsoleColor) String() string {
 	var consoleColorString [8]string = [8]string{"black", "red", "green", "yellow", "blue", "purple", "cyan", "white"}
