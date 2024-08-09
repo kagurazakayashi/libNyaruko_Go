@@ -33,7 +33,7 @@ var (
 func LoadLanguageFile(languageFile string, isReload bool) error {
 	// 檢查語言是否為空，如果是則自動設定
 	if len(Language) == 0 || Language == "auto" {
-		AutoSetLanguage()
+		AutoSetLanguage(true)
 	}
 
 	// 開啟檔案
@@ -89,12 +89,15 @@ func LoadLanguageFile(languageFile string, isReload bool) error {
 }
 
 // 自動設定語言
-func AutoSetLanguage() string {
+// 如果只想獲取語言而不儲存，可以使用 `save` 可以設定為 false ，否則為 true
+func AutoSetLanguage(save bool) string {
 	syslang, err := jibber_jabber.DetectIETF()
 	if err != nil && len(syslang) > 0 {
 		return ""
 	}
-	Language = syslang
+	if save {
+		Language = syslang
+	}
 	return syslang
 }
 
