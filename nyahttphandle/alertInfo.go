@@ -25,11 +25,20 @@ var (
 	alertinfoLanguages   []string   = []string{}   // 語言碼列表
 	alertinfoLanguageLen int        = 0            // 支援的語言數量
 	alertinfoMaxID       int        = 0            // 最大碼值
-	splitStr                        = "-"          // 分割字符串
+	splitStr                        = ""           // 分割字符串,有此字符时在code中同时返回错误码及信息码
+	successStart         int        = 10000        // 成功信息码起始
+	successEnd           int        = 19999        // 成功信息码结束
 )
 
-func SetMsgIDSplitString(splitString string) {
-	splitStr = splitString
+// 设置错误码及信息码的分割字符串
+func SetMsgIDSplitString(split_string string) {
+	splitStr = split_string
+}
+
+// 设置成功信息码范围
+func SetSuccessRange(success_start int, success_end int) {
+	successStart = success_start
+	successEnd = success_end
 }
 
 // alertInfoTemplateLoad 載入語言配置檔案（请先执行该函数再继续使用 AlertInfoJson(KV)(M) ）
@@ -143,10 +152,18 @@ func AlertInfoJsonKV(w http.ResponseWriter, languageID int, respID interface{}, 
 //	return map[string]string 待生成 JSON 的字典
 func AlertInfoJsonGenMap(languageID int, respID interface{}, massageID int) (int, map[string]interface{}) {
 	code, massageText := AlertInfoGet(languageID, massageID)
-	return code, map[string]interface{}{
-		"code": fmt.Sprintf("%v%s%d", respID, splitStr, massageID),
+
+	msgMap := map[string]interface{}{
+		"code": massageID,
 		"msg":  massageText,
 	}
+	if splitStr != "" {
+		msgMap["code"] = fmt.Sprintf("%v%s%d", respID, splitStr, massageID)
+
+	} else if massageID < successStart && massageID > successEnd {
+		msgMap["e"] = respID
+	}
+	return code, msgMap
 }
 
 // alertInfoJsonGenJson: 將待生成 JSON 的字典生成為 JSON 位元組
