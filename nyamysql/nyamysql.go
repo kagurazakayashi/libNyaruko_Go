@@ -84,6 +84,39 @@ func (p *NyaMySQL) QueryDataCMD(sql string, value ...[]interface{}) (map[string]
 //
 //	所有關鍵字除*以外需要用``包裹
 //	`recn`		string		查詢語句的返回。全部：*，指定：`id`
+//	`join`		string		JOIN語句
+//	`where`		string		where語句部分，最前方不需要填寫where，例：`id`=1
+//	`orderby`	string		排序，例：`id` ASC/DESC
+//	`limit`		string		分頁，例：1,10
+//	`value`		interface{}	查詢條件的值
+//	return cmap.ConcurrentMap 和 error 物件，結構為：
+//	{
+//	    "0":{"id":1,"name":"1"},
+//	    "1":{"id":2,"name":"2"}
+//	}
+func (p *NyaMySQL) QueryDataJOIN(recn string, join []string, where string, orderby string, limit string, value ...interface{}) (map[string]map[string]string, error) {
+	var dbq string = "select " + recn + " from "
+	for i := 0; i < len(join); i++ {
+		dbq += join[i]
+	}
+	if where != "" {
+		dbq += " where " + where
+	}
+	if orderby != "" {
+		dbq += " ORDER BY " + orderby
+	}
+	if limit != "" {
+		dbq += " limit " + limit
+	} else {
+		dbq += " limit " + p.limit
+	}
+	return p.QueryTable(dbq, value...)
+}
+
+// QueryData: 從SQL資料庫中查詢
+//
+//	所有關鍵字除*以外需要用``包裹
+//	`recn`		string		查詢語句的返回。全部：*，指定：`id`
 //	`table`		string		從哪個表中查詢，此處可以使用關聯語句
 //	`where`		string		where語句部分，最前方不需要填寫where，例：`id`=1
 //	`orderby`	string		排序，例：`id` ASC/DESC
@@ -107,6 +140,10 @@ func (p *NyaMySQL) QueryData(recn string, table string, where string, orderby st
 	} else {
 		dbq += " limit " + p.limit
 	}
+	return p.QueryTable(dbq, value...)
+}
+
+func (p *NyaMySQL) QueryTable(dbq string, value ...interface{}) (map[string]map[string]string, error) {
 	if p.debug != nil {
 		p.debug.Println("[QueryData]", dbPrintStr(dbq, value))
 	} else {
