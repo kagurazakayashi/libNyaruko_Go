@@ -14,7 +14,7 @@ import (
 
 /* 語言配置檔案示例 test.csv :
 id,en,chs,cht  //第一行確定語言列表, id標記用可以是任意字串，隨後跟自定義語言程式碼
-200,OK,成功执行请求,成功執行請求  //200 為 massageID，隨後跟每個語言的文字，逗號分隔。
+200,OK,成功执行请求,成功執行請求  //200 為 messageID，隨後跟每個語言的文字，逗號分隔。
 100,"Hello, World!","你好，世界！","你好，世界！"  //文字中有 , 時用 "..." 包含當前文字。
 101,"Hello, ""Miyabi"" !","你好，“Miyabi”！","你好，「Miyabi」！"  //文字中有 " 時用 "" 代替，並用 "..." 包含當前文字。
 引號和逗號的處理遵循 CSV 檔案格式的語法。部分電子表格軟體可能儲存為非 UTF-8 編碼和非 LF 換行符，注意這些軟體儲存後可能需要轉換。
@@ -113,26 +113,26 @@ func AlertinfoLanguageList() []string {
 // AlertInfoJson: 獲取可以直接用於返回客戶端的訊息 JSON 模板
 //
 //	`languageID`	int	語言 ID
-//	`massageID`	int	資訊 ID
+//	`messageID`	int	資訊 ID
 //	return		string	取出的文字
 //	示例：配置檔案第一行為 `id,en,chs`, 第二行為 `200,OK,成功` 時：
 //	AlertInfoJson(1, 200) -> {"code":"200","msg":"OK"}
-func AlertInfoJson(w http.ResponseWriter, languageID int, respID interface{}, massageID int) []byte {
-	return AlertInfoJsonKV(w, languageID, respID, massageID, "", "")
+func AlertInfoJson(w http.ResponseWriter, languageID int, respID interface{}, messageID int) []byte {
+	return AlertInfoJsonKV(w, languageID, respID, messageID, "", "")
 }
 
 // AlertInfoJsonKV: 獲取可以直接用於返回客戶端的訊息 JSON 模板，並可以附帶一個自定義鍵值
 //
 //	`languageID`		int		語言 ID
 //	`respID`		interface{}	回應 ID
-//	`massageID`		int		資訊 ID
+//	`messageID`		int		資訊 ID
 //	`key`			string		自定義鍵
 //	`value`			string		自定義值
 //	return			string		取出的文字
 //	示例：配置檔案第一行為 `id,en,chs`, 第二行為 `200,OK,成功` 時：
 //	AlertInfoJsonKV(1, 200, "token", "1145141919810") -> {"code":"1001","msg":"OK","token":"1145141919810"}
-func AlertInfoJsonKV(w http.ResponseWriter, languageID int, respID interface{}, massageID int, key string, value interface{}) []byte {
-	code, jsonMap := AlertInfoJsonGenMap(languageID, respID, massageID)
+func AlertInfoJsonKV(w http.ResponseWriter, languageID int, respID interface{}, messageID int, key string, value interface{}) []byte {
+	code, jsonMap := AlertInfoJsonGenMap(languageID, respID, messageID)
 	if value != "" {
 		if key == "" {
 			jsonMap["data"] = value
@@ -148,19 +148,18 @@ func AlertInfoJsonKV(w http.ResponseWriter, languageID int, respID interface{}, 
 //
 //	`languageID`		int 		語言 ID
 //	`respID`		interface{}	回應 ID
-//	`massageID`		int		資訊 ID
+//	`messageID`		int		資訊 ID
 //	return map[string]string 待生成 JSON 的字典
-func AlertInfoJsonGenMap(languageID int, respID interface{}, massageID int) (int, map[string]interface{}) {
-	code, massageText := AlertInfoGet(languageID, massageID)
+func AlertInfoJsonGenMap(languageID int, respID interface{}, messageID int) (int, map[string]interface{}) {
+	code, messageText := AlertInfoGet(languageID, messageID)
 
 	msgMap := map[string]interface{}{
-		"code": massageID,
-		"msg":  massageText,
+		"code": messageID,
+		"msg":  messageText,
 	}
 	if splitStr != "" {
-		msgMap["code"] = fmt.Sprintf("%v%s%d", respID, splitStr, massageID)
-
-	} else if massageID < successStart && massageID > successEnd {
+		msgMap["code"] = fmt.Sprintf("%v%s%d", respID, splitStr, messageID)
+	} else if messageID < successStart || messageID > successEnd {
 		msgMap["e"] = respID
 	}
 	return code, msgMap
@@ -181,20 +180,20 @@ func alertInfoJsonGenJson(jsonMap map[string]interface{}) []byte {
 // alertInfoGet: 取出資訊文本
 //
 //	`languageID`	int	語言 ID
-//	`massageID`	int	資訊 ID
+//	`messageID`	int	資訊 ID
 //	return		string	取出的文字
 //	示例：配置檔案第一行為 `id,code,en,chs`, 第二行為 `200,OK,成功` 時：
 //	alertInfoGet(1, 200) -> "OK"
-func AlertInfoGet(languageID int, massageID int) (int, string) {
-	if len(alertinfo) == 0 || languageID >= alertinfoLanguageLen || massageID > alertinfoMaxID {
+func AlertInfoGet(languageID int, messageID int) (int, string) {
+	if len(alertinfo) == 0 || languageID >= alertinfoLanguageLen || messageID > alertinfoMaxID {
 		return 400, ""
 	}
 
-	code, err := strconv.Atoi(alertinfo[0][massageID])
+	code, err := strconv.Atoi(alertinfo[0][messageID])
 	if err != nil {
 		return 400, alertinfo[languageID][9999]
 	}
-	return code, alertinfo[languageID][massageID]
+	return code, alertinfo[languageID][messageID]
 }
 
 // alertInfoSub: 識別雙引號轉義
