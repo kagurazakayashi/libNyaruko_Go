@@ -1,7 +1,11 @@
 // MySQL 表結構
 package nyamysql
 
-import "database/sql"
+import (
+	"database/sql"
+	"fmt"
+	"strings"
+)
 
 // TableColumn 結構體表示資料庫表的列結構資訊
 // 每個欄位對應 MySQL INFORMATION_SCHEMA.COLUMNS 表中的列
@@ -48,4 +52,65 @@ func (p *NyaMySQL) GetTableStructure(tableName string) ([]TableColumn, error) {
 		columns = append(columns, column)
 	}
 	return columns, nil
+}
+
+// CreateTableFromColumns 建立表
+//
+// 引數：
+//   - tableName: string，要建立的表名
+//   - columns: []TableColumn，表結構資訊
+//
+// 返回值：
+//   - error: 執行 SQL 語句時可能的錯誤
+func (p *NyaMySQL) CreateTableFromColumns(tableName string, columns []TableColumn) error {
+	var columnDefinitions []string
+	var primaryKeys []string
+
+	for _, col := range columns {
+		// 構建列定義
+		columnDef := fmt.Sprintf("`%s` %s", col.ColumnName, col.ColumnType)
+
+		// 處理是否允許 NULL
+		if col.IsNullable == "NO" {
+			columnDef += " NOT NULL"
+		}
+
+		// 處理預設值（如果有）
+		if col.ColumnDefault.Valid {
+			columnDef += fmt.Sprintf(" DEFAULT '%s'", col.ColumnDefault.String)
+		}
+
+		// 處理額外資訊（如 AUTO_INCREMENT）
+		if col.Extra != "" {
+			columnDef += " " + col.Extra
+		}
+
+		// 處理主鍵
+		if col.ColumnKey == "PRI" {
+			primaryKeys = append(primaryKeys, fmt.Sprintf("`%s`", col.ColumnName))
+		}
+
+		// 新增到列定義列表
+		columnDefinitions = append(columnDefinitions, columnDef)
+	}
+
+	// 處理主鍵
+	if len(primaryKeys) > 0 {
+		columnDefinitions = append(columnDefinitions, fmt.Sprintf("PRIMARY KEY (%s)", strings.Join(primaryKeys, ", ")))
+	}
+
+	// 生成 `CREATE TABLE` 語句
+	createTableSQL := fmt.Sprintf("CREATE TABLE `%s` (\n  %s\n);", tableName, strings.Join(columnDefinitions, ",\n  "))
+
+	// 列印 SQL 語句（用於除錯）
+	// fmt.Println(createTableSQL)
+
+	// 執行 SQL 查詢
+	rows, err := p.db.Query(createTableSQL)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	return nil
 }
