@@ -11,10 +11,10 @@ import (
 )
 
 type RedisDBConfig struct {
-	Address  string `json:"redis_addr"`
-	Port     string `json:"redis_port"`
-	Password string `json:"redis_pwd"`
-	DB       int    `json:"redis_db"`
+	Address  string `json:"redis_addr" yaml:"redis_addr"`
+	Port     string `json:"redis_port" yaml:"redis_port"`
+	Password string `json:"redis_pwd" yaml:"redis_pwd"`
+	DB       int    `json:"redis_db" yaml:"redis_db"`
 }
 
 // <類>

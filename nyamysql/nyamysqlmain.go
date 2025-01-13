@@ -10,12 +10,12 @@ import (
 )
 
 type MySQLDBConfig struct {
-	User     string `json:"mysql_user"`
-	Password string `json:"mysql_pwd"`
-	Address  string `json:"mysql_addr"`
-	Port     string `json:"mysql_port"`
-	DbName   string `json:"mysql_db"`
-	MaxLimit string `json:"mysql_limit"`
+	User     string `json:"mysql_user" yaml:"mysql_user"`
+	Password string `json:"mysql_pwd" yaml:"mysql_pwd"`
+	Address  string `json:"mysql_addr" yaml:"mysql_addr"`
+	Port     string `json:"mysql_port" yaml:"mysql_port"`
+	DbName   string `json:"mysql_db" yaml:"mysql_db"`
+	MaxLimit string `json:"mysql_limit" yaml:"mysql_limit"`
 }
 
 type NyaMySQL NyaMySQLT
