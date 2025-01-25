@@ -187,10 +187,24 @@ func (p *NyaMySQL) QueryTable(dbq string, value ...interface{}) (map[string]map[
 //
 //	所有關鍵字除*以外需要用``包裹
 //	`table`		string		從哪個表中查詢不需要``包裹
-//	`key`		string		需要新增的列，需要以,分割
+//	`key`		[]string	需要新增的字段
 //	`values`	...interface{}	額外的新增值，會在values後面新增
-//	return int64 和 error 物件，返回新增行的id
+//	return int64 和 error 物件，返回受影响行数
 func (p *NyaMySQL) AddRecord(table string, key []string, values ...interface{}) (int64, error) {
+	id, err := p.AddOrUpdateRecord(table, key, []string{}, values...)
+	return id, err
+}
+
+// AddOrUpdateRecord: 向SQL資料庫中新增或更新
+//
+//	所有關鍵字除*以外需要用``包裹
+//	`table`		string		從哪個表中查詢不需要``包裹
+//	`key`		[]string	需要新增的字段
+//	`upkey`		[]string	需要更新的字段
+//	`values`	...interface{}	額外的新增值，會在values後面新增
+//	return int64 和 error 物件，返回受影响行数
+func (p *NyaMySQL) AddOrUpdateRecord(table string, key []string, upkey []string, values ...interface{}) (int64, error) {
+
 	if len(values)%len(key) != 0 {
 		return 0, fmt.Errorf("'values'内容数量与'key'不符")
 	}
@@ -216,10 +230,26 @@ func (p *NyaMySQL) AddRecord(table string, key []string, values ...interface{}) 
 		valuesStr += "?"
 	}
 	dbq += valuesStr + ")"
+
+	debugKey := "AddRecord"
+	if len(upkey) != 0 {
+		dbq += " ON DUPLICATE KEY UPDATE "
+
+		temp := ""
+		for _, v := range upkey {
+			if temp != "" {
+				temp += ","
+			}
+			temp += " `" + v + "`=VALUES(`" + v + "`)"
+		}
+		dbq += temp + ";"
+		debugKey = "AddOrUpdateRecord"
+	}
+
 	if p.debug != nil {
-		p.debug.Println("[AddRecord]", dbPrintStr(dbq, values))
+		p.debug.Printf("[%s]%s\n", debugKey, dbPrintStr(dbq, values))
 	} else {
-		log.Println("[AddRecord]", dbPrintStr(dbq, values))
+		log.Println("[%s]%s\n", debugKey, dbPrintStr(dbq, values))
 	}
 
 	stmt, err := p.db.Prepare(dbq)
@@ -234,21 +264,21 @@ func (p *NyaMySQL) AddRecord(table string, key []string, values ...interface{}) 
 	stmt.Close()
 	if err != nil {
 		if p.debug != nil {
-			p.debug.Printf("data insert faied, error:[%v]", err.Error())
+			p.debug.Printf("data updated faied, error:[%v]", err.Error())
 		}
 		return 0, err
 	}
-	id, err := result.LastInsertId()
+	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		if p.debug != nil {
-			p.debug.Printf("insert faied, error:[%v]", err.Error())
+			p.debug.Printf("updated faied, error:[%v]", err.Error())
 		}
 		return 0, err
 	}
 	if p.debug != nil {
-		p.debug.Printf("insert success, last id:[%d]\n", id)
+		p.debug.Printf("Successfully updated %d rows of data!\n", rowsAffected)
 	}
-	return id, nil
+	return rowsAffected, nil
 }
 
 // UpdataRecord: 從SQL資料庫中修改指定的值
@@ -520,7 +550,13 @@ func handleQD(query *sql.Rows, Deubg *log.Logger) (map[string]map[string]string,
 // dbPrintStr: 將SQL語句中的 ? 替換成實際值
 func dbPrintStr(dbStr string, values []interface{}) string {
 	for _, v := range values {
-		dbStr = strings.Replace(dbStr, "?", fmt.Sprintf("'%v'", v), 1)
+		val, ok := v.(string)
+		if ok && len(val) > 50 {
+			val = val[:50] + "..."
+			dbStr = strings.Replace(dbStr, "?", fmt.Sprintf("'%v'", val), 1)
+		} else {
+			dbStr = strings.Replace(dbStr, "?", fmt.Sprintf("'%v'", v), 1)
+		}
 	}
 	return dbStr
 }
