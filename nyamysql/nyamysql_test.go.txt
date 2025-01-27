@@ -1,21 +1,23 @@
-package nyamysql
+package nyamysql_test
 
 import (
 	"fmt"
 	"testing"
+
+	"github.com/kagurazakayashi/libNyaruko_Go/nyamysql"
 )
 
 var mysqlconfig string = `{
-	"mysql_user": "0wew0",
-	"mysql_pwd": "7%5cfM3!&pw9^#6j",
+	"mysql_user": "",
+	"mysql_pwd": "",
 	"mysql_addr": "127.0.0.1",
 	"mysql_port": "3306",
-	"mysql_db": "0wew0",
+	"mysql_db": "",
 	"mysql_limit": "100"
 }`
 
 func TestQueryCMD(t *testing.T) {
-	nyaMS := New(mysqlconfig, nil)
+	nyaMS := nyamysql.New(mysqlconfig, nil)
 	if nyaMS.Error() != nil {
 		fmt.Println("MySQL DB Link error:", nyaMS.Error().Error())
 		return
@@ -32,7 +34,7 @@ func TestQueryCMD(t *testing.T) {
 }
 
 func TestQueryData(t *testing.T) {
-	nyaMS := New(mysqlconfig, nil)
+	nyaMS := nyamysql.New(mysqlconfig, nil)
 	if nyaMS.Error() != nil {
 		fmt.Println("MySQL DB Link error:", nyaMS.Error().Error())
 		return
@@ -50,7 +52,7 @@ func TestQueryData(t *testing.T) {
 }
 
 func TestAdd(t *testing.T) {
-	nyaMS := New(mysqlconfig, nil)
+	nyaMS := nyamysql.New(mysqlconfig, nil)
 	if nyaMS.Error() != nil {
 		fmt.Println("MySQL DB Link error:", nyaMS.Error().Error())
 		return
@@ -65,7 +67,7 @@ func TestAdd(t *testing.T) {
 }
 
 func TestUpdate(t *testing.T) {
-	nyaMS := New(mysqlconfig, nil)
+	nyaMS := nyamysql.New(mysqlconfig, nil)
 	if nyaMS.Error() != nil {
 		fmt.Println("MySQL DB Link error:", nyaMS.Error().Error())
 		return
@@ -81,7 +83,7 @@ func TestUpdate(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	nyaMS := New(mysqlconfig, nil)
+	nyaMS := nyamysql.New(mysqlconfig, nil)
 	if nyaMS.Error() != nil {
 		fmt.Println("MySQL DB Link error:", nyaMS.Error().Error())
 		return
@@ -97,7 +99,7 @@ func TestDelete(t *testing.T) {
 }
 
 func TestDeleteNoPK(t *testing.T) {
-	nyaMS := New(mysqlconfig, nil)
+	nyaMS := nyamysql.New(mysqlconfig, nil)
 	if nyaMS.Error() != nil {
 		fmt.Println("MySQL DB Link error:", nyaMS.Error().Error())
 		return

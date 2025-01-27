@@ -49,7 +49,11 @@ func New(configJsonString string, Debug *log.Logger) *NyaMySQL {
 	if err := sqldb.Ping(); err != nil {
 		return &NyaMySQL{err: err}
 	}
-	return &NyaMySQL{db: sqldb, limit: mySQLConfig.Limit, debug: Debug}
+	return &NyaMySQL{
+		db:    sqldb,
+		limit: mySQLConfig.Limit,
+		debug: Debug,
+	}
 }
 
 // SqlExec: 執行 SQL 語句
