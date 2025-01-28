@@ -15,7 +15,7 @@ type MySQLDBConfig struct {
 	Address  string `json:"mysql_addr"`
 	Port     string `json:"mysql_port"`
 	DbName   string `json:"mysql_db"`
-	Limit    string `json:"mysql_limit"`
+	MaxLimit string `json:"mysql_limit"`
 }
 
 type NyaMySQL NyaMySQLT
@@ -40,7 +40,11 @@ func New(configJsonString string, Debug *log.Logger) *NyaMySQL {
 	if err != nil {
 		return &NyaMySQL{err: err}
 	}
+	return NewC(mySQLConfig, Debug)
+}
 
+// NewC: 同上, `configJsonString` 改為 `mySQLConfig` 以支援直接配置輸入
+func NewC(mySQLConfig MySQLDBConfig, Debug *log.Logger) *NyaMySQL {
 	var sqlsetting string = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", mySQLConfig.User, mySQLConfig.Password, mySQLConfig.Address, mySQLConfig.Port, mySQLConfig.DbName)
 	sqldb, err := sql.Open("mysql", sqlsetting)
 	if err != nil {
@@ -51,7 +55,7 @@ func New(configJsonString string, Debug *log.Logger) *NyaMySQL {
 	}
 	return &NyaMySQL{
 		db:    sqldb,
-		limit: mySQLConfig.Limit,
+		limit: mySQLConfig.MaxLimit,
 		debug: Debug,
 	}
 }

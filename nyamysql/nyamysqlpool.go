@@ -2,6 +2,7 @@
 package nyamysql
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"time"
@@ -9,7 +10,7 @@ import (
 
 type MySQLPool MySQLPoolT
 type MySQLPoolT struct {
-	mySQLConfig   string
+	mySQLConfig   MySQLDBConfig
 	mySQLLink     int
 	mySQLLinkMax  int
 	mySQLPoolList []*NyaMySQL
@@ -20,8 +21,18 @@ type MySQLPoolT struct {
 
 // NewPool: 建立新的 NyaMySQL 池，代替 New 。
 func NewPool(configJsonString string, Debug *log.Logger) *MySQLPool {
+	var mySQLConfig MySQLDBConfig
+	err := json.Unmarshal([]byte(configJsonString), &mySQLConfig)
+	if err != nil {
+		return &MySQLPool{err: err}
+	}
+	return NewPoolC(mySQLConfig)
+}
+
+// NewPoolC: 同上, `configJsonString` 改為 `mySQLConfig` 以支援直接配置輸入
+func NewPoolC(mySQLConfig MySQLDBConfig) *MySQLPool {
 	return &MySQLPool{
-		mySQLConfig:   configJsonString,
+		mySQLConfig:   mySQLConfig,
 		mySQLLink:     0,
 		mySQLLinkMax:  10,
 		mySQLPoolList: nil,
@@ -53,7 +64,7 @@ func (p *MySQLPool) MysqlIsRun(isShowPrint bool) (int, error) {
 	}
 
 	// 建立新的 MySQL 連線
-	nyaMS := New(p.mySQLConfig, nil)
+	nyaMS := NewC(p.mySQLConfig, nil)
 	if nyaMS.Error() != nil {
 		if isShowPrint {
 			println("MySQL DB Link error:", nyaMS.Error().Error())
