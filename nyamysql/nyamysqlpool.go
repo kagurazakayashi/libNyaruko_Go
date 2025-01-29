@@ -4,7 +4,6 @@ package nyamysql
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 )
 
@@ -20,26 +19,30 @@ type MySQLPoolT struct {
 }
 
 // NewPool: 建立新的 NyaMySQL 池，代替 New 。
-func NewPool(configJsonString string, Debug *log.Logger) *MySQLPool {
+func NewPool(configJsonString string, linkMax int) *MySQLPool {
 	var mySQLConfig MySQLDBConfig
 	err := json.Unmarshal([]byte(configJsonString), &mySQLConfig)
 	if err != nil {
 		return &MySQLPool{err: err}
 	}
-	return NewPoolC(mySQLConfig)
+	return NewPoolC(mySQLConfig, linkMax)
 }
 
 // NewPoolC: 同上, `configJsonString` 改為 `mySQLConfig` 以支援直接配置輸入
-func NewPoolC(mySQLConfig MySQLDBConfig) *MySQLPool {
-	return &MySQLPool{
+func NewPoolC(mySQLConfig MySQLDBConfig, linkMax int) *MySQLPool {
+	var o = &MySQLPool{
 		mySQLConfig:   mySQLConfig,
 		mySQLLink:     0,
-		mySQLLinkMax:  10,
-		mySQLPoolList: nil,
+		mySQLLinkMax:  linkMax,
+		mySQLPoolList: []*NyaMySQL{},
 		waitCount:     10,
 		waitTime:      500,
 		err:           nil,
 	}
+	for i := 0; i < o.mySQLLinkMax; i++ {
+		o.mySQLPoolList = append(o.mySQLPoolList, nil)
+	}
+	return o
 }
 
 // mysqlIsRun: 檢查並建立新的 MySQL 連線。
