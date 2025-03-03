@@ -1,4 +1,4 @@
-package mysql2sqlite
+package nyasqldrift
 
 import "errors"
 
