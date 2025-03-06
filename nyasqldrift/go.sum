@@ -1,0 +1,14 @@
+github.com/go-sql-driver/mysql v1.6.0 h1:BCTh4TKNUYmOmMUcQ3IipzF5prigylS7XXjEkfCHuOE=
+github.com/go-sql-driver/mysql v1.6.0/go.mod h1:DCzpHaOWr8IXmIStZouvnhqoel9Qv2LBy8hT2VhHyBg=
+github.com/kagurazakayashi/libNyaruko_Go/nyamysql v0.0.0-20250305123210-0d0ab18a6cda h1:QxzA+3Ql0AcmsfIzvcQ3l4ZxBpxfzOvFCeVY6mjK6no=
+github.com/kagurazakayashi/libNyaruko_Go/nyamysql v0.0.0-20250305123210-0d0ab18a6cda/go.mod h1:b3FjYv1pb1hZGgh1ZmOdFB3Swt08v0E7f4pSblJqgsk=
+github.com/kagurazakayashi/libNyaruko_Go/nyasqlite v0.0.0-20250305123210-0d0ab18a6cda h1:As9gDyL0h4NAb0QAwzFy+SYF/0ewmQuUa8n//x9DjEQ=
+github.com/kagurazakayashi/libNyaruko_Go/nyasqlite v0.0.0-20250305123210-0d0ab18a6cda/go.mod h1:BJKPKIadmt3n8Sq/Jo0kWQXftj/e+yZQ7auClUzRPOw=
+github.com/mattn/go-sqlite3 v1.14.24 h1:tpSp2G2KyMnnQu99ngJ47EIkWVmliIizyZBfPrBWDRM=
+github.com/mattn/go-sqlite3 v1.14.24/go.mod h1:Uh1q+B4BYcTPb+yiD3kU8Ct7aC0hY9fxUwlHK0RXw+Y=
+github.com/tidwall/gjson v1.18.0 h1:FIDeeyB800efLX89e5a8Y0BNH+LOngJyGrIWxG2FKQY=
+github.com/tidwall/gjson v1.18.0/go.mod h1:/wbyibRr2FHMks5tjHJ5F8dMZh3AcwJEMf5vlfC0lxk=
+github.com/tidwall/match v1.1.1 h1:+Ho715JplO36QYgwN9PGYNhgZvoUSc9X2c80KVTi+GA=
+github.com/tidwall/match v1.1.1/go.mod h1:eRSPERbgtNPcGhD8UCthc6PmLEQXEWd3PRB5JTxsfmM=
+github.com/tidwall/pretty v1.2.0 h1:RWIZEg2iJ8/g6fDDYzMpobmaoGh5OLl4AXtGUGPcqCs=
+github.com/tidwall/pretty v1.2.0/go.mod h1:ITEVvHYasfjBbM0u2Pg8T2nJnzm8xPwvNhhsoaGGjNU=

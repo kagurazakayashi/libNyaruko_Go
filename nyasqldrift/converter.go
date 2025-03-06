@@ -99,3 +99,76 @@ func convertCreateTableSQLiteToMySQL(sqliteSQL string) (string, error) {
 	newSQL += " ENGINE=InnoDB DEFAULT CHARSET=utf8;"
 	return newSQL, nil
 }
+
+/*
+// test_main 是一個測試函式，用於演示如何從 MySQL 資料庫遷移資料到 SQLite 資料庫，以及從 SQLite 資料庫遷移資料回 MySQL 資料庫。
+// 該函式首先獲取環境變數 MYSQL_TEST_DSN 的值，該值包含 MySQL 資料庫的連線字串。
+// 如果環境變數未設定，則程式將終止並輸出錯誤資訊。
+// 接著，函式嘗試開啟 MySQL 和 SQLite 資料庫連線。
+// 如果連線失敗，程式將終止並輸出錯誤資訊。
+// 然後，函式建立了一個名為 "users" 的表（如果不存在），並插入了一些示例資料。
+// 隨後，函式執行了兩次資料遷移操作：首先將 MySQL 資料庫中的 "users" 表遷移到 SQLite 資料庫中，
+// 然後將 SQLite 資料庫中的 "users" 表遷移回 MySQL 資料庫中。
+// 如果遷移失敗，程式將終止並輸出錯誤資訊。
+// 最後，程式輸出成功完成所有操作的訊息。
+func test_main() {
+	mysqlDSN := os.Getenv("MYSQL_TEST_DSN") // 如 "user:pass@tcp(localhost:3306)/testdb"
+	// 檢查環境變數MYSQL_TEST_DSN是否設定
+	if mysqlDSN == "" {
+		log.Fatal("MYSQL_TEST_DSN environment variable not set")
+	}
+	// 連線到MySQL資料庫
+	mysqlDB, err := sql.Open("mysql", mysqlDSN)
+	if err != nil {
+		log.Fatalf("MySQL connect failed: %v", err)
+	}
+	// 關閉MySQL資料庫連線
+	defer mysqlDB.Close()
+	// 連線到SQLite資料庫
+	sqliteDB, err := sql.Open("sqlite3", "./test.sqlite")
+	if err != nil {
+		log.Fatalf("SQLite open failed: %v", err)
+	}
+	// 關閉SQLite資料庫連線
+	defer sqliteDB.Close()
+	// 建立MySQL客戶端例項
+	mysqlClient := &nyamysql.NyaMySQL{DB: mysqlDB}
+	// 建立SQLite客戶端例項
+	sqliteClient := &nyasqlite.NyaSQLite{DB: sqliteDB}
+	// 定義表名
+	tableName := "users"
+	// 在MySQL中建立表
+	_, err = mysqlDB.Exec(fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+		id INT AUTO_INCREMENT PRIMARY KEY,
+		username VARCHAR(100) NOT NULL,
+		email VARCHAR(255),
+		created_at DATETIME
+	);`, tableName))
+	if err != nil {
+		log.Fatalf("Failed to create source table in MySQL: %v", err)
+	}
+	// 列印日誌，表示MySQL表已建立
+	log.Printf("[MySQL] Source table `%s` ready", tableName)
+	// 列印日誌，表示開始從MySQL遷移到SQLite
+	log.Println("[Stage 1] Migrating MySQL ➜ SQLite...")
+	// 執行遷移操作
+	if err := migrator.MigrateMySQLTableToSQLite(mysqlClient, sqliteClient, tableName); err != nil {
+		log.Fatalf("Migration to SQLite failed: %v", err)
+	}
+	// 列印日誌，表示遷移完成
+	log.Println("Migration to SQLite complete.")
+	// 定義複製表名
+	copyTableName := "users_copy"
+	// 列印日誌，表示開始從SQLite遷移到MySQL
+	log.Println("[Stage 2] Migrating SQLite ➜ MySQL...")
+	// 執行遷移操作
+	if err := migrator.MigrateSQLiteTableToMySQL(sqliteClient, mysqlClient, tableName); err != nil {
+		log.Fatalf("Migration back to MySQL failed: %v", err)
+	}
+	// 列印日誌，表示遷移完成
+	log.Println("Migration back to MySQL complete.")
+
+	// 列印日誌，表示所有操作完成
+	log.Println("All done! Inspect your databases for results.")
+}
+*/
