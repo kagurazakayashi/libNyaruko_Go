@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 
 	_ "github.com/mattn/go-sqlite3"
 	"gopkg.in/yaml.v3"
@@ -62,11 +64,21 @@ func New(configString string, Debug *log.Logger) *NyaSQLite {
 //     如果連線失敗，返回的 NyaSQLite 結構體中將包含錯誤資訊。
 func NewC(sqliteConfig SQLiteConfig, Debug *log.Logger) *NyaSQLite {
 	var err error = nil
+	// 確保資料庫檔案的資料夾存在
+	dbDir := filepath.Dir(sqliteConfig.SQLiteFile)
+	if err = os.MkdirAll(dbDir, 0755); err != nil {
+		return &NyaSQLite{err: err}
+	}
 
 	// 嘗試開啟 SQLite 資料庫連線
 	sqlLiteDB, err := sql.Open(sqliteConfig.SQLiteVer, sqliteConfig.SQLiteFile)
 	if err != nil {
 		// 如果連線失敗，返回包含錯誤資訊的 NyaSQLite 例項
+		return &NyaSQLite{err: err}
+	}
+
+	// 立刻觸發真正的連線與檔案建立
+	if err := sqlLiteDB.Ping(); err != nil {
 		return &NyaSQLite{err: err}
 	}
 
