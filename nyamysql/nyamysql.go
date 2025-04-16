@@ -191,8 +191,36 @@ func (p *NyaMySQL) QueryTable(dbq string, value ...interface{}) (map[string]map[
 //	`values`	...interface{}	額外的新增值，會在values後面新增
 //	return int64 和 error 物件，返回受影响行数
 func (p *NyaMySQL) AddRecord(table string, key []string, values ...interface{}) (int64, error) {
-	id, err := p.AddOrUpdateRecord(table, key, []string{}, values...)
-	return id, err
+	return p.AddOrUpdateRecord(table, key, []string{}, values...)
+}
+
+// AddRecordLastInsertId: 向SQL資料庫中新增
+//
+//	所有關鍵字除*以外需要用``包裹
+//	`table`		string		從哪個表中查詢不需要``包裹
+//	`key`		[]string	需要新增的字段
+//	`values`	...interface{}	額外的新增值，會在values後面新增
+//	return int64 和 error 物件，返回受影响的行ID
+func (p *NyaMySQL) AddRecordLastInsertId(table string, key []string, values ...interface{}) (int64, error) {
+	result, err := p.addOrUpdateRecord(table, key, []string{}, values...)
+	if err != nil {
+		if p.debug != nil {
+			p.debug.Printf("data updated faied, error:[%v]", err.Error())
+		}
+		return 0, err
+	}
+
+	lastInsertId, err := result.LastInsertId()
+	if err != nil {
+		if p.debug != nil {
+			p.debug.Printf("updated faied, error:[%v]", err.Error())
+		}
+		return 0, err
+	}
+	if p.debug != nil {
+		p.debug.Printf("Successfully updated %d rows of data!\n", lastInsertId)
+	}
+	return lastInsertId, err
 }
 
 // AddOrUpdateRecord: 向SQL資料庫中新增或更新
@@ -204,9 +232,39 @@ func (p *NyaMySQL) AddRecord(table string, key []string, values ...interface{}) 
 //	`values`	...interface{}	額外的新增值，會在values後面新增
 //	return int64 和 error 物件，返回受影响行数
 func (p *NyaMySQL) AddOrUpdateRecord(table string, key []string, upkey []string, values ...interface{}) (int64, error) {
+	result, err := p.addOrUpdateRecord(table, key, upkey, values...)
+	if err != nil {
+		if p.debug != nil {
+			p.debug.Printf("data updated faied, error:[%v]", err.Error())
+		}
+		return 0, err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		if p.debug != nil {
+			p.debug.Printf("updated faied, error:[%v]", err.Error())
+		}
+		return 0, err
+	}
+	if p.debug != nil {
+		p.debug.Printf("Successfully updated %d rows of data!\n", rowsAffected)
+	}
+	return rowsAffected, err
+}
+
+// AddOrUpdateRecord: 向SQL資料庫中新增或更新
+//
+//	所有關鍵字除*以外需要用``包裹
+//	`table`		string		從哪個表中查詢不需要``包裹
+//	`key`		[]string	需要新增的字段
+//	`upkey`		[]string	需要更新的字段
+//	`values`	...interface{}	額外的新增值，會在values後面新增
+//	return int64 和 error 物件，返回受影响行数
+func (p *NyaMySQL) addOrUpdateRecord(table string, key []string, upkey []string, values ...interface{}) (sql.Result, error) {
 
 	if len(values)%len(key) != 0 {
-		return 0, fmt.Errorf("'values'内容数量与'key'不符")
+		return nil, fmt.Errorf("'values'内容数量与'key'不符")
 	}
 	var dbq string = "insert into `" + table + "` ("
 	keyStr := ""
@@ -249,7 +307,7 @@ func (p *NyaMySQL) AddOrUpdateRecord(table string, key []string, upkey []string,
 	if p.debug != nil {
 		p.debug.Printf("[%s]%s\n", debugKey, dbPrintStr(dbq, values))
 	} else {
-		log.Println("[%s]%s\n", debugKey, dbPrintStr(dbq, values))
+		log.Printf("[%s]%s\n", debugKey, dbPrintStr(dbq, values))
 	}
 
 	stmt, err := p.db.Prepare(dbq)
@@ -257,7 +315,7 @@ func (p *NyaMySQL) AddOrUpdateRecord(table string, key []string, upkey []string,
 		if p.debug != nil {
 			p.debug.Printf("query faied, error:[%v]", err.Error())
 		}
-		return 0, err
+		return nil, err
 	}
 
 	result, err := stmt.Exec(values...)
@@ -266,19 +324,9 @@ func (p *NyaMySQL) AddOrUpdateRecord(table string, key []string, upkey []string,
 		if p.debug != nil {
 			p.debug.Printf("data updated faied, error:[%v]", err.Error())
 		}
-		return 0, err
+		return nil, err
 	}
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		if p.debug != nil {
-			p.debug.Printf("updated faied, error:[%v]", err.Error())
-		}
-		return 0, err
-	}
-	if p.debug != nil {
-		p.debug.Printf("Successfully updated %d rows of data!\n", rowsAffected)
-	}
-	return rowsAffected, nil
+	return result, nil
 }
 
 // UpdataRecord: 從SQL資料庫中修改指定的值
