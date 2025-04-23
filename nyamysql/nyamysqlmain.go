@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"regexp"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -71,6 +72,30 @@ func New(configString string, Debug *log.Logger) *NyaMySQL {
 
 	// 如果 JSON 和 YAML 解析均失敗，返回一個包含錯誤的 NyaMySQL 例項
 	return &NyaMySQL{err: err}
+}
+
+// 设置数据库连接池 最多允许打开的连接总数（包括使用中和空闲）。
+func (p *NyaMySQL) SetMaxOpenConns(n int) {
+	p.db.SetMaxOpenConns(n)
+}
+
+// 最多允许多少个空闲（未被使用）的连接 保留在连接池中，避免频繁建立/释放连接。
+func (p *NyaMySQL) SetMaxIdleConns(n int) {
+	p.db.SetMaxIdleConns(n)
+}
+
+// 每个连接最多可以使用多久（生命周期）。一旦超过这个时间，无论连接是否仍然有效，下次使用时都会被关闭并重新建立。
+func (p *NyaMySQL) SetConnMaxIdleTime(d time.Duration) {
+	p.db.SetConnMaxIdleTime(d)
+}
+
+// 每个连接最多可以使用多久（生命周期）。一旦超过这个时间，无论连接是否仍然有效，下次使用时都会被关闭并重新建立。
+func (p *NyaMySQL) SetConnMaxLifetime(d time.Duration) {
+	p.db.SetConnMaxLifetime(d)
+}
+
+func (p *NyaMySQL) Stats() sql.DBStats {
+	return p.db.Stats()
 }
 
 // NewC 建立一個新的 NyaMySQL 例項，用於管理與 MySQL 資料庫的連線。
