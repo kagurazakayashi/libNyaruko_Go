@@ -45,10 +45,12 @@ func SetSuccessRange(success_start int, success_end int) {
 //
 //	`filePath`	string	語言配置檔案(csv)路徑
 //	資料儲存到 alertinfo ，無需重複載入
-func AlertInfoTemplateLoad(filePath string) {
+//
+//	return	int	code+語言的列数
+func AlertInfoTemplateLoad(filePath string) int {
 	FileHandle, err := os.Open(filePath)
 	if err != nil {
-		return
+		return 0
 	}
 	defer FileHandle.Close()
 	lineReader := bufio.NewReader(FileHandle)
@@ -62,7 +64,7 @@ func AlertInfoTemplateLoad(filePath string) {
 				// OK
 				break
 			} else {
-				return
+				return 0
 			}
 		}
 		var line string = string(lineB)
@@ -100,7 +102,7 @@ func AlertInfoTemplateLoad(filePath string) {
 		}
 		alertinfo[i] = languageArr // 將當前語言陣列寫入總陣列
 	}
-	fmt.Println(len(alertinfo))
+	return len(alertinfo)
 }
 
 // alertinfoLanguageList: 受支援的語言列表
