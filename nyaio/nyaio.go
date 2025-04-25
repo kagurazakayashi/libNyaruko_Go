@@ -5,7 +5,6 @@ import (
 	"bufio"
 	"io"
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -25,7 +24,8 @@ type NyaFileInfo struct {
 
 type NyaReadFileLineHandler func(lineText string, lineNum uint, isEnd bool, err error)
 
-//NyaReadFileLineHandler: FileReadLine 的代理方法
+// NyaReadFileLineHandler: FileReadLine 的代理方法
+//
 //	`lineText` string 當前行的文字內容
 //	`lineNum`  uint   當前行號
 //	`isEnd`    bool   本條是否為檔案的末尾
@@ -54,19 +54,21 @@ var (
 	readFileLineHandler NyaReadFileLineHandler
 )
 
-//ReadFile: 讀取文字檔案
+// ReadFile: 讀取文字檔案
+//
 //	`filePath` string 檔案路徑
 //	return     string 讀取到的內容
 //	return     error  可能遇到的錯誤
 func FileRead(filePath string) (string, error) {
-	bytes, err := ioutil.ReadFile(filePath)
+	bytes, err := os.ReadFile(filePath)
 	if err != nil {
 		return "", err
 	}
 	return string(bytes), nil
 }
 
-//ReadFile: 逐行讀取文字檔案（適用於大量行大檔案）
+// ReadFile: 逐行讀取文字檔案（適用於大量行大檔案）
+//
 //	需要实现 NyaReadFileLineHandler 代理方法接收
 //	`filePath` string 檔案路徑
 //	return     error  可能遇到的錯誤
@@ -101,7 +103,8 @@ func FileReadLine(filePath string) error {
 	return nil
 }
 
-//FileExist: 檔案或資料夾是否存在
+// FileExist: 檔案或資料夾是否存在
+//
 //	`filePath` string 檔案路徑
 //	return     int8   判斷結果( >0 即存在):
 //	-1 發生錯誤
@@ -128,7 +131,8 @@ func FileExist(filePath string) (int8, error) {
 	}
 }
 
-//FileInfo: 獲取檔案資訊
+// FileInfo: 獲取檔案資訊
+//
 //	`filePath` string      檔案路徑
 //	return     NyaFileInfo 檔案資訊
 //	return     error       可能遇到的錯誤
@@ -150,13 +154,14 @@ func FileInfo(filePath string) (NyaFileInfo, error) {
 	return fInfo, nil
 }
 
-//FileCopy: 複製檔案
-//	`srcPath` string 原始檔案路徑
-//	`dstPath` string 目標檔案路徑
-//  `options` ...OptionConfig 可選配置，執行 `Option_*` 函式輸入
-//		`permission` uint32 新建檔案的許可權，預設 644
-//	return    int64  寫入的資料量
-//	return    error  可能遇到的錯誤
+// FileCopy: 複製檔案
+//
+//		`srcPath` string 原始檔案路徑
+//		`dstPath` string 目標檔案路徑
+//	 `options` ...OptionConfig 可選配置，執行 `Option_*` 函式輸入
+//			`permission` uint32 新建檔案的許可權，預設 644
+//		return    int64  寫入的資料量
+//		return    error  可能遇到的錯誤
 func FileCopy(srcPath string, dstPath string, options ...OptionConfig) (written int64, err error) {
 	option := &Option{permission: 644}
 	for _, o := range options {
@@ -175,12 +180,13 @@ func FileCopy(srcPath string, dstPath string, options ...OptionConfig) (written 
 	return io.Copy(dst, src)
 }
 
-//FolderCreate: 新建資料夾
-//	`dirPath` string 新建文件夹路径
-//  `options` ...OptionConfig 可選配置，執行 `Option_*` 函式輸入
-//		`permission` uint32 新建資料夾的許可權，預設 755
-//	return    bool   是否实际创建（若为 false 且无 error ，则文件夹已经存在）
-//	return    error  可能遇到的错误
+// FolderCreate: 新建資料夾
+//
+//		`dirPath` string 新建文件夹路径
+//	 `options` ...OptionConfig 可選配置，執行 `Option_*` 函式輸入
+//			`permission` uint32 新建資料夾的許可權，預設 755
+//		return    bool   是否实际创建（若为 false 且无 error ，则文件夹已经存在）
+//		return    error  可能遇到的错误
 func FolderCreate(dirPath string, options ...OptionConfig) (bool, error) {
 	option := &Option{permission: 755}
 	for _, o := range options {
@@ -197,13 +203,14 @@ func FolderCreate(dirPath string, options ...OptionConfig) (bool, error) {
 	return true, nil
 }
 
-//FileList: 獲取指定資料夾下的所有檔案
+// FileList: 獲取指定資料夾下的所有檔案
+//
 //	`dirPth`    string 要搜尋的資料夾路徑
 //	`recursive` bool   是否需要遍歷子資料夾
 //	`suffix`    string 關鍵詞，只列出包含指定關鍵詞的檔名（英文不區分大小寫）
 func FileList(dirPth string, recursive bool, suffix string) ([]string, error) {
 	var files []string
-	dir, err := ioutil.ReadDir(dirPth)
+	dir, err := os.ReadDir(dirPth)
 	if err != nil {
 		return nil, err
 	}
@@ -230,10 +237,10 @@ func FileList(dirPth string, recursive bool, suffix string) ([]string, error) {
 	return files, nil
 }
 
-//ListDir: 獲取指定目錄下的所有資料夾
+// ListDir: 獲取指定目錄下的所有資料夾
 func ListDir(dirPth string) ([]string, error) {
 	var files []string
-	dir, err := ioutil.ReadDir(dirPth)
+	dir, err := os.ReadDir(dirPth)
 	if err != nil {
 		return nil, err
 	}
@@ -247,7 +254,8 @@ func ListDir(dirPth string) ([]string, error) {
 	return files, nil
 }
 
-//GetCurrentPath: 獲取當前程式所在資料夾路徑
+// GetCurrentPath: 獲取當前程式所在資料夾路徑
+//
 //	return string 當前程式所在資料夾路徑
 func GetCurrentPath() string {
 	file, err := exec.LookPath(os.Args[0])
