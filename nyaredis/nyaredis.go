@@ -11,10 +11,12 @@ import (
 )
 
 type RedisDBConfig struct {
-	Address  string `json:"redis_addr" yaml:"redis_addr"`
-	Port     string `json:"redis_port" yaml:"redis_port"`
-	Password string `json:"redis_pwd" yaml:"redis_pwd"`
-	DB       int    `json:"redis_db" yaml:"redis_db"`
+	Address      string `json:"redis_addr" yaml:"redis_addr"`
+	Port         string `json:"redis_port" yaml:"redis_port"`
+	Password     string `json:"redis_pwd" yaml:"redis_pwd"`
+	DB           int    `json:"redis_db" yaml:"redis_db"`
+	PoolSize     int    `json:"redis_poolSize" yaml:"redis_poolSize"`
+	MinIdleConns int    `json:"redis_minIdleConns" yaml:"redis_minIdleConns"`
 }
 
 // <類>
@@ -86,10 +88,19 @@ func NewDB(configJsonString string, dbID int, maxDB int) *NyaRedis {
 		dbid = redisConfig.DB
 	}
 
+	if redisConfig.PoolSize == 0 {
+		redisConfig.PoolSize = 20
+	}
+	if redisConfig.MinIdleConns == 0 {
+		redisConfig.MinIdleConns = 5
+	}
+
 	var nRedisDB *redis.Client = redis.NewClient(&redis.Options{
-		Addr:     redisConfig.Address + ":" + redisConfig.Port,
-		Password: redisConfig.Password,
-		DB:       dbid,
+		Addr:         redisConfig.Address + ":" + redisConfig.Port,
+		Password:     redisConfig.Password,
+		DB:           dbid,
+		PoolSize:     redisConfig.PoolSize,
+		MinIdleConns: redisConfig.MinIdleConns,
 	})
 	_, err = nRedisDB.Ping(nRedisDB.Context()).Result()
 	if err != nil {
