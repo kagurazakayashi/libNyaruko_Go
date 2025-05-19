@@ -82,27 +82,34 @@ func NewDB(configJsonString string, dbID int, maxDB int) *NyaRedis {
 	if err != nil {
 		return &NyaRedis{err: err}
 	}
+	return NewC(redisConfig, dbID, maxDB)
+}
 
+// NewC: 建立新的 NyaRedis 例項
+//
+//	`config` RedisDBConfig 配置
+//	下一步使用 `Error()` 或 `ErrorString()` 檢查是否有錯誤
+func NewC(config RedisDBConfig, dbID int, maxDB int) *NyaRedis {
 	var dbid int = dbID
 	if !(0 <= dbID && dbID <= maxDB) {
-		dbid = redisConfig.DB
+		dbid = config.DB
 	}
 
-	if redisConfig.PoolSize == 0 {
-		redisConfig.PoolSize = 20
+	if config.PoolSize == 0 {
+		config.PoolSize = 20
 	}
-	if redisConfig.MinIdleConns == 0 {
-		redisConfig.MinIdleConns = 5
+	if config.MinIdleConns == 0 {
+		config.MinIdleConns = 5
 	}
 
 	var nRedisDB *redis.Client = redis.NewClient(&redis.Options{
-		Addr:         redisConfig.Address + ":" + redisConfig.Port,
-		Password:     redisConfig.Password,
+		Addr:         config.Address + ":" + config.Port,
+		Password:     config.Password,
 		DB:           dbid,
-		PoolSize:     redisConfig.PoolSize,
-		MinIdleConns: redisConfig.MinIdleConns,
+		PoolSize:     config.PoolSize,
+		MinIdleConns: config.MinIdleConns,
 	})
-	_, err = nRedisDB.Ping(nRedisDB.Context()).Result()
+	_, err := nRedisDB.Ping(nRedisDB.Context()).Result()
 	if err != nil {
 		return &NyaRedis{err: err}
 	}
