@@ -98,6 +98,10 @@ func (p *NyaMySQL) Stats() sql.DBStats {
 	return p.db.Stats()
 }
 
+func (p *NyaMySQL) SetDebug(Debug *log.Logger) {
+	p.debug = Debug
+}
+
 // NewC 建立一個新的 NyaMySQL 例項，用於管理與 MySQL 資料庫的連線。
 // 該函式接受 MySQL 資料庫的配置資訊和一個除錯日誌記錄器，並返回一個初始化後的 NyaMySQL 物件。
 // 如果連線或 ping 資料庫時發生錯誤，返回的 NyaMySQL 物件將包含該錯誤資訊。
