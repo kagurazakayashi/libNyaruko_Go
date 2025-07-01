@@ -11,12 +11,12 @@ import (
 	"fmt"
 	"hash"
 	"io"
-	"io/ioutil"
 	"math"
 	"os"
 )
 
-//MD5String: 計算 MD5 字串雜湊
+// MD5String: 計算 MD5 字串雜湊
+//
 //	`data` string 要進行雜湊的源字串
 //	`key`  string 使用 HMAC 演算法帶 Key 運算，空字串為不使用
 //	return string 雜湊之後的字串，如果失敗則返回空字串
@@ -25,7 +25,8 @@ func MD5String(data string, key string) string {
 	return hashEncodeString(5, data, key)
 }
 
-//MD5FilePath: 計算檔案 MD5 雜湊（基於檔案路徑）
+// MD5FilePath: 計算檔案 MD5 雜湊（基於檔案路徑）
+//
 //	`filePath` string 要進行雜湊檔案路徑
 //	`key`  string 使用 HMAC 演算法帶 Key 運算，空字串為不使用
 //	`chunk` float64 分塊讀取的每塊資料量(B)。其中 0 為不分塊(整體讀入), -1 為使用預設分塊大小 4KB 。
@@ -36,7 +37,8 @@ func MD5FilePath(filePath string, key string, chunk float64) (string, error) {
 	return hashEncodeFilePath(5, filePath, chunk, key)
 }
 
-//MD5File: 計算小型檔案 MD5 雜湊（基於 io.Reader 檔案物件）
+// MD5File: 計算小型檔案 MD5 雜湊（基於 io.Reader 檔案物件）
+//
 //	`file` io.Reader 檔案物件
 //	`key`  string 使用 HMAC 演算法帶 Key 運算，空字串為不使用
 //	return string 雜湊之後的字串，如果失敗則返回空字串
@@ -46,7 +48,8 @@ func MD5File(file io.Reader, key string) (string, error) {
 	return hashEncodeFile(5, file, nil, 0, key)
 }
 
-//MD5FileBig: 計算大型檔案 MD5 雜湊（基於 *os.File 檔案物件）
+// MD5FileBig: 計算大型檔案 MD5 雜湊（基於 *os.File 檔案物件）
+//
 //	`file` *os.File 檔案物件
 //	`key`  string 使用 HMAC 演算法帶 Key 運算，空字串為不使用
 //	`chunk` float64 分塊讀取的每塊資料量(B)。其中 0 為不分塊(整體讀入), -1 為使用預設分塊大小 4KB 。
@@ -57,7 +60,8 @@ func MD5FileBig(file *os.File, key string, chunk float64) (string, error) {
 	return hashEncodeFile(5, nil, file, chunk, key)
 }
 
-//SHA1String: 計算 SHA1 字串雜湊
+// SHA1String: 計算 SHA1 字串雜湊
+//
 //	`data` string 要進行雜湊的源字串
 //	`key`  string 使用 HMAC 演算法帶 Key 運算，空字串為不使用
 //	return string 雜湊之後的字串。如果失敗則返回空字串。
@@ -66,7 +70,8 @@ func SHA1String(data string, key string) string {
 	return hashEncodeString(1, data, key)
 }
 
-//SHA1FilePath: 計算檔案 SHA1 雜湊（基於檔案路徑）
+// SHA1FilePath: 計算檔案 SHA1 雜湊（基於檔案路徑）
+//
 //	`filePath` string 要進行雜湊檔案路徑
 //	`key`  string 使用 HMAC 演算法帶 Key 運算，空字串為不使用
 //	`chunk` float64 分塊讀取的每塊資料量(B)。其中 0 為不分塊(整體讀入), -1 為使用預設分塊大小 4KB 。
@@ -77,7 +82,8 @@ func SHA1FilePath(filePath string, key string, chunk float64) (string, error) {
 	return hashEncodeFilePath(1, filePath, chunk, key)
 }
 
-//SHA1File: 計算小型檔案 SHA1 雜湊（基於 io.Reader 檔案物件）
+// SHA1File: 計算小型檔案 SHA1 雜湊（基於 io.Reader 檔案物件）
+//
 //	`file` io.Reader 檔案物件
 //	`key`  string 使用 HMAC 演算法帶 Key 運算，空字串為不使用
 //	return string 雜湊之後的字串，如果失敗則返回空字串
@@ -87,7 +93,8 @@ func SHA1File(file io.Reader, key string) (string, error) {
 	return hashEncodeFile(1, file, nil, 0, key)
 }
 
-//SHA1FileBig: 計算大型檔案 SHA1 雜湊（基於 *os.File 檔案物件）
+// SHA1FileBig: 計算大型檔案 SHA1 雜湊（基於 *os.File 檔案物件）
+//
 //	`file` *os.File 檔案物件
 //	`key`  string 使用 HMAC 演算法帶 Key 運算，空字串為不使用
 //	`chunk` float64 分塊讀取的每塊資料量(B)。其中 0 為不分塊(整體讀入), -1 為使用預設分塊大小 4KB 。
@@ -98,7 +105,8 @@ func SHA1FileBig(file *os.File, key string, chunk float64) (string, error) {
 	return hashEncodeFile(1, nil, file, chunk, key)
 }
 
-//SHA256String: 計算 SHA256 字串雜湊
+// SHA256String: 計算 SHA256 字串雜湊
+//
 //	`data` string 要進行雜湊的源字串
 //	`key`  string 使用 HMAC 演算法帶 Key 運算，空字串為不使用
 //	return string 雜湊之後的字串。如果失敗則返回空字串。
@@ -107,7 +115,8 @@ func SHA256String(data string, key string) string {
 	return hashEncodeString(256, data, key)
 }
 
-//SHA256FilePath: 計算檔案 SHA256 雜湊（基於檔案路徑）
+// SHA256FilePath: 計算檔案 SHA256 雜湊（基於檔案路徑）
+//
 //	`filePath` string 要進行雜湊檔案路徑
 //	`key`  string 使用 HMAC 演算法帶 Key 運算，空字串為不使用
 //	`chunk` float64 分塊讀取的每塊資料量(B)。其中 0 為不分塊(整體讀入), -1 為使用預設分塊大小 4KB 。
@@ -118,7 +127,8 @@ func SHA256FilePath(filePath string, key string, chunk float64) (string, error) 
 	return hashEncodeFilePath(256, filePath, chunk, key)
 }
 
-//SHA256File: 計算小型檔案 SHA256 雜湊（基於 io.Reader 檔案物件）
+// SHA256File: 計算小型檔案 SHA256 雜湊（基於 io.Reader 檔案物件）
+//
 //	`file` io.Reader 檔案物件
 //	`key`  string 使用 HMAC 演算法帶 Key 運算，空字串為不使用
 //	return string 雜湊之後的字串，如果失敗則返回空字串
@@ -128,7 +138,8 @@ func SHA256File(file io.Reader, key string) (string, error) {
 	return hashEncodeFile(256, file, nil, 0, key)
 }
 
-//SHA256FileBig: 計算大型檔案 SHA256 雜湊（基於 *os.File 檔案物件）
+// SHA256FileBig: 計算大型檔案 SHA256 雜湊（基於 *os.File 檔案物件）
+//
 //	`file` *os.File 檔案物件
 //	`key`  string 使用 HMAC 演算法帶 Key 運算，空字串為不使用
 //	`chunk` float64 分塊讀取的每塊資料量(B)。其中 0 為不分塊(整體讀入), -1 為使用預設分塊大小 4KB 。
@@ -139,7 +150,8 @@ func SHA256FileBig(file *os.File, key string, chunk float64) (string, error) {
 	return hashEncodeFile(256, nil, file, chunk, key)
 }
 
-//SHA512String: 計算 SHA512 字串雜湊
+// SHA512String: 計算 SHA512 字串雜湊
+//
 //	`data` string 要進行雜湊的源字串
 //	`key`  string 使用 HMAC 演算法帶 Key 運算，空字串為不使用
 //	return string 雜湊之後的字串。如果失敗則返回空字串。
@@ -148,7 +160,8 @@ func SHA512String(data string, key string) string {
 	return hashEncodeString(512, data, key)
 }
 
-//SHA512FilePath: 計算檔案 SHA512 雜湊（基於檔案路徑）
+// SHA512FilePath: 計算檔案 SHA512 雜湊（基於檔案路徑）
+//
 //	`data` string 要進行雜湊的源字串
 //	`key`  string 使用 HMAC 演算法帶 Key 運算，空字串為不使用
 //	`chunk` float64 分塊讀取的每塊資料量(B)。其中 0 為不分塊(整體讀入), -1 為使用預設分塊大小 4KB 。
@@ -159,7 +172,8 @@ func SHA512FilePath(filePath string, key string, chunk float64) (string, error) 
 	return hashEncodeFilePath(512, filePath, chunk, key)
 }
 
-//SHA512File: 計算小型檔案 SHA512 雜湊（基於 io.Reader 檔案物件）
+// SHA512File: 計算小型檔案 SHA512 雜湊（基於 io.Reader 檔案物件）
+//
 //	`file` io.Reader 檔案物件
 //	`key`  string 使用 HMAC 演算法帶 Key 運算，空字串為不使用
 //	return string 雜湊之後的字串，如果失敗則返回空字串
@@ -169,7 +183,8 @@ func SHA512File(file io.Reader, key string) (string, error) {
 	return hashEncodeFile(512, file, nil, 0, key)
 }
 
-//SHA512FileBig: 計算大型檔案 SHA512 雜湊（基於 *os.File 檔案物件）
+// SHA512FileBig: 計算大型檔案 SHA512 雜湊（基於 *os.File 檔案物件）
+//
 //	`file` *os.File 檔案物件
 //	`key`  string 使用 HMAC 演算法帶 Key 運算，空字串為不使用
 //	`chunk` float64 分塊讀取的每塊資料量(B)。其中 0 為不分塊(整體讀入), -1 為使用預設分塊大小 4KB 。
@@ -180,12 +195,14 @@ func SHA512FileBig(file *os.File, key string, chunk float64) (string, error) {
 	return hashEncodeFile(512, nil, file, chunk, key)
 }
 
-//hashEncode: 計算雜湊編碼
+// hashEncode: 計算雜湊編碼
+//
 //	`mode` int16  雜湊模式 1:SHA1, 5:MD5, 256:SHA256, 512:SHA512
 //	`dataByte` []byte 要進行雜湊的資料
+//	`key`  string 使用 HMAC 演算法帶 Key 運算，空字串為不使用
 //	return string 雜湊之後的字串，如果失敗則返回空字串
 //	return error  可能發生的錯誤
-func hashEncode(mode int16, dataByte []byte, key string) (string, error) {
+func HashEncode(mode int16, dataByte []byte, key string) (string, error) {
 	var dataByteN []byte = dataByte
 	if len(key) == 0 {
 		var h hash.Hash = hashMode(mode)()
@@ -210,20 +227,22 @@ func hashEncode(mode int16, dataByte []byte, key string) (string, error) {
 	}
 }
 
-//hashEncodeString: 計算字串雜湊
+// hashEncodeString: 計算字串雜湊
+//
 //	`mode` int16  雜湊模式 1:SHA1, 5:MD5, 256:SHA256, 512:SHA512
 //	`data` string 要進行雜湊的源字串
 //	return string 雜湊之後的字串，如果失敗則返回空字串。
 func hashEncodeString(mode int16, data string, key string) string {
 	var dataByte []byte = []byte(data)
-	hashStr, err := hashEncode(mode, dataByte, key)
+	hashStr, err := HashEncode(mode, dataByte, key)
 	if err != nil {
 		return ""
 	}
 	return hashStr
 }
 
-//hashEncodeFilePath: 計算檔案雜湊（基於檔案路徑）
+// hashEncodeFilePath: 計算檔案雜湊（基於檔案路徑）
+//
 //	`mode` int16 雜湊模式 1:SHA1, 5:MD5, 256:SHA256, 512:SHA512
 //	`filePath` string 檔案路徑
 func hashEncodeFilePath(mode int16, filePath string, chunk float64, key string) (string, error) {
@@ -234,7 +253,8 @@ func hashEncodeFilePath(mode int16, filePath string, chunk float64, key string) 
 	}
 }
 
-//hashEncodeFile: 計算檔案雜湊（基於檔案物件）
+// hashEncodeFile: 計算檔案雜湊（基於檔案物件）
+//
 //	`mode` int16 雜湊模式 1:SHA1, 5:MD5, 256:SHA256, 512:SHA512
 //	`smallFile` io.Reader 小型檔案物件
 //	`bigFile`   *os.File  大型檔案物件
@@ -253,7 +273,8 @@ func hashEncodeFile(mode int16, smallFile io.Reader, bigFile *os.File, chunk flo
 	return "", fmt.Errorf("no file obj")
 }
 
-//hashEncodeSmallFilePath: 計算小型檔案雜湊（基於檔案路徑）
+// hashEncodeSmallFilePath: 計算小型檔案雜湊（基於檔案路徑）
+//
 //	`mode` int16 雜湊模式 1:SHA1, 5:MD5, 256:SHA256, 512:SHA512
 //	`filePath` string 檔案路徑
 //	return string 雜湊之後的字串，如果失敗則返回空字串
@@ -274,21 +295,23 @@ func hashEncodeSmallFilePath(mode int16, filePath string, key string) (string, e
 	return hashStr, nil
 }
 
-//hashEncodeSmallFile: 計算小型檔案雜湊（基於檔案物件）
+// hashEncodeSmallFile: 計算小型檔案雜湊（基於檔案物件）
+//
 //	`mode` int16 雜湊模式 1:SHA1, 5:MD5, 256:SHA256, 512:SHA512
 //	`file` io.Reader 檔案物件
 //	return string 雜湊之後的字串，如果失敗則返回空字串
 //	return error  可能發生的錯誤
 //	注意：小檔案讀取模式下，會從檔案當前指標位置開始讀取，計算後文件指標在末尾
 func hashEncodeSmallFile(mode int16, file io.Reader, key string) (string, error) {
-	dataByte, err := ioutil.ReadAll(file)
+	dataByte, err := io.ReadAll(file)
 	if err != nil {
 		return "", err
 	}
-	return hashEncode(mode, dataByte, key)
+	return HashEncode(mode, dataByte, key)
 }
 
-//hashEncodeBigFilePath: 計算大型檔案雜湊（基於檔案路徑）
+// hashEncodeBigFilePath: 計算大型檔案雜湊（基於檔案路徑）
+//
 //	`mode` int16 雜湊模式 1:SHA1, 5:MD5, 256:SHA256, 512:SHA512
 //	`filePath` string 檔案路徑
 //	return string 雜湊之後的字串，如果失敗則返回空字串
@@ -309,7 +332,8 @@ func hashEncodeBigFilePath(mode int16, filePath string, chunk float64) (string, 
 	return hashStr, nil
 }
 
-//hashEncodeBigFile: 計算大型檔案雜湊（基於檔案物件）
+// hashEncodeBigFile: 計算大型檔案雜湊（基於檔案物件）
+//
 //	`mode` int16 雜湊模式 1:SHA1, 5:MD5, 256:SHA256, 512:SHA512
 //	`file` io.Reader 檔案物件
 //	return string 雜湊之後的字串，如果失敗則返回空字串
@@ -329,6 +353,7 @@ func hashEncodeBigFile(mode int16, file *os.File, chunk float64) (string, error)
 	var h hash.Hash = hashMode(mode)()
 	for i := uint64(0); i < blocks; i++ {
 		var startByte int64 = int64(float64(i) * chunk)
+		println(startByte, "/", filesize)
 		var needByte float64 = float64(filesize - startByte)
 		if needByte > chunk {
 			needByte = chunk
@@ -339,7 +364,7 @@ func hashEncodeBigFile(mode int16, file *os.File, chunk float64) (string, error)
 		if err != nil {
 			return "", err
 		}
-		_, err = io.WriteString(h, string(buf))
+		_, err = h.Write(buf)
 		if err != nil {
 			return "", err
 		}
@@ -350,7 +375,8 @@ func hashEncodeBigFile(mode int16, file *os.File, chunk float64) (string, error)
 	return hex.EncodeToString(dataByte), nil
 }
 
-//hashMode: 指定雜湊演算法
+// hashMode: 指定雜湊演算法
+//
 //	`mode` int16  雜湊模式 1:SHA1, 5:MD5, 256:SHA256, 512:SHA512
 //	return func() hash.Hash 雜湊函式
 func hashMode(mode int16) func() hash.Hash {
