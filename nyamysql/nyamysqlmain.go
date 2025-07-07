@@ -98,6 +98,10 @@ func (p *NyaMySQL) Stats() sql.DBStats {
 	return p.db.Stats()
 }
 
+func (p *NyaMySQL) Ping() error {
+	return p.db.Ping()
+}
+
 func (p *NyaMySQL) SetDebug(Debug *log.Logger) {
 	p.debug = Debug
 }
