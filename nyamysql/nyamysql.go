@@ -298,14 +298,14 @@ func (p *NyaMySQL) addOrUpdateRecord(table string, key []string, upkey []string,
 
 	debugKey := "AddRecord"
 	if len(upkey) != 0 {
-		dbq += " ON DUPLICATE KEY UPDATE "
+		dbq += " AS new ON DUPLICATE KEY UPDATE "
 
 		temp := ""
 		for _, v := range upkey {
 			if temp != "" {
 				temp += ","
 			}
-			temp += " `" + v + "`=VALUES(`" + v + "`)"
+			temp += " `" + v + "`=new.`" + v + "`"
 		}
 		dbq += temp + ";"
 		debugKey = "AddOrUpdateRecord"
