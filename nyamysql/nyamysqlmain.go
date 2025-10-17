@@ -29,6 +29,11 @@ type MySQLDBConfig struct {
 	MaxLimit string `json:"mysql_limit" yaml:"mysql_limit"`
 }
 
+const (
+	NYAMYSQL_LOG_LEVEL_ERROR = iota
+	NYAMYSQL_LOG_LEVEL_DEBUG
+)
+
 // NyaMySQL 是一個類型別名，指向 NyaMySQLT 結構體。
 // 該類型別名用於簡化程式碼中的型別引用。
 type NyaMySQL NyaMySQLT
@@ -40,11 +45,25 @@ type NyaMySQL NyaMySQLT
 // - err: 用於儲存資料庫操作中的錯誤資訊。
 // - debug: 用於除錯的日誌記錄器。
 type NyaMySQLT struct {
-	db    *sql.DB
-	limit string
-	err   error
-	debug *log.Logger
+	db          *sql.DB
+	limit       string
+	err         error
+	loggerLevel int
+	debug       *log.Logger
 }
+
+type ParametersSave struct {
+	Save        bool
+	Config      MySQLDBConfig
+	loggerLevel int
+	Debug       *log.Logger
+}
+
+var (
+	parametersSave ParametersSave = ParametersSave{
+		Save: false,
+	}
+)
 
 // New 函式用於根據傳入的配置字串建立一個新的 NyaMySQL 例項。
 // 該函式嘗試解析配置字串為 JSON 或 YAML 格式，並根據解析結果初始化 MySQL 配置。
@@ -56,18 +75,18 @@ type NyaMySQLT struct {
 //
 // 返回值:
 //   - *NyaMySQL: 返回一個 NyaMySQL 例項指標，如果配置解析失敗，例項中將包含錯誤資訊。
-func New(configString string, Debug *log.Logger) *NyaMySQL {
+func New(configString string, Debug *log.Logger, logLevel int) *NyaMySQL {
 	var mySQLConfig MySQLDBConfig
 	var err error = nil
 
 	// 嘗試將配置字串解析為 JSON 格式
 	if err := json.Unmarshal([]byte(configString), &mySQLConfig); err == nil {
-		return NewC(mySQLConfig, Debug)
+		return NewC(mySQLConfig, Debug, logLevel)
 	}
 
 	// 如果 JSON 解析失敗，嘗試將配置字串解析為 YAML 格式
 	if err := yaml.Unmarshal([]byte(configString), &mySQLConfig); err == nil {
-		return NewC(mySQLConfig, Debug)
+		return NewC(mySQLConfig, Debug, logLevel)
 	}
 
 	// 如果 JSON 和 YAML 解析均失敗，返回一個包含錯誤的 NyaMySQL 例項
@@ -116,7 +135,11 @@ func (p *NyaMySQL) SetDebug(Debug *log.Logger) {
 //
 // 返回值:
 //   - *NyaMySQL: 返回一個指向 NyaMySQL 結構體的指標，該結構體包含資料庫連線、最大連線限制和除錯日誌記錄器。
-func NewC(mySQLConfig MySQLDBConfig, Debug *log.Logger) *NyaMySQL {
+func NewC(mySQLConfig MySQLDBConfig, Debug *log.Logger, logLevel int) *NyaMySQL {
+	parametersSave.Save = true
+	parametersSave.Config = mySQLConfig
+	parametersSave.loggerLevel = logLevel
+	parametersSave.Debug = Debug
 	// 根據 MySQL 配置資訊生成連線字串
 	var sqlsetting string = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", mySQLConfig.User, mySQLConfig.Password, mySQLConfig.Address, mySQLConfig.Port, mySQLConfig.DbName)
 
@@ -135,9 +158,10 @@ func NewC(mySQLConfig MySQLDBConfig, Debug *log.Logger) *NyaMySQL {
 
 	// 返回成功初始化的 NyaMySQL 物件，包含資料庫連線、最大連線限制和除錯日誌記錄器
 	return &NyaMySQL{
-		db:    sqldb,
-		limit: mySQLConfig.MaxLimit,
-		debug: Debug,
+		db:          sqldb,
+		limit:       mySQLConfig.MaxLimit,
+		loggerLevel: logLevel,
+		debug:       Debug,
 	}
 }
 
@@ -192,6 +216,10 @@ func (p *NyaMySQL) ErrorString() string {
 func (p *NyaMySQL) Close() {
 	// 檢查資料庫連線是否已初始化
 	if p.db != nil {
+		parametersSave.Save = false
+		parametersSave.Config = MySQLDBConfig{}
+		parametersSave.loggerLevel = NYAMYSQL_LOG_LEVEL_ERROR
+		parametersSave.Debug = nil
 		// 關閉資料庫連線
 		p.db.Close()
 		// 將資料庫連線指標置為 nil，防止重複關閉

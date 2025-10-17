@@ -22,18 +22,25 @@ import (
 //	    "1":{"id":2,"name":"2"}
 //	}
 func (p *NyaMySQL) QueryDataCMD(sql string, value ...[]interface{}) (map[string]map[string]string, error) {
+	if p == nil {
+		p = NewC(parametersSave.Config, parametersSave.Debug, parametersSave.loggerLevel)
+		if p.Error() != nil {
+			return map[string]map[string]string{}, p.err
+		}
+	}
 	sqls := strings.Split(sql, ";")
 	for i, v := range sqls {
-		if p.debug != nil {
+		if p.loggerLevel == NYAMYSQL_LOG_LEVEL_DEBUG && p.debug != nil {
 			p.debug.Println("[QueryDataCMD]", dbPrintStr(v, value[i]))
-		} else {
-			log.Println("[QueryDataCMD]", dbPrintStr(v, value[i]))
 		}
 		if value == nil {
 			if i+1 == len(sqls) {
 				query, err := p.db.Query(v)
 				if err != nil {
 					if p.debug != nil {
+						if p.loggerLevel == NYAMYSQL_LOG_LEVEL_ERROR {
+							p.debug.Println("[QueryDataCMD]", dbPrintStr(v, value[i]))
+						}
 						p.debug.Printf("query faied, error:[%v]", err.Error())
 					}
 					return map[string]map[string]string{}, err
@@ -41,7 +48,7 @@ func (p *NyaMySQL) QueryDataCMD(sql string, value ...[]interface{}) (map[string]
 				return handleQD(query, p.debug)
 			} else {
 				_, err := p.db.Exec(v)
-				if p.debug != nil {
+				if p.loggerLevel == NYAMYSQL_LOG_LEVEL_DEBUG && p.debug != nil {
 					p.debug.Printf("query faied, error:[%v]", err.Error())
 				}
 				return map[string]map[string]string{}, err
@@ -50,6 +57,9 @@ func (p *NyaMySQL) QueryDataCMD(sql string, value ...[]interface{}) (map[string]
 			stmt, err := p.db.Prepare(v)
 			if err != nil {
 				if p.debug != nil {
+					if p.loggerLevel == NYAMYSQL_LOG_LEVEL_ERROR {
+						p.debug.Println("[QueryDataCMD]", dbPrintStr(v, value[i]))
+					}
 					p.debug.Printf("query faied, error:[%v]", err.Error())
 				}
 				return map[string]map[string]string{}, err
@@ -60,6 +70,9 @@ func (p *NyaMySQL) QueryDataCMD(sql string, value ...[]interface{}) (map[string]
 				stmt.Close()
 				if err != nil {
 					if p.debug != nil {
+						if p.loggerLevel == NYAMYSQL_LOG_LEVEL_ERROR {
+							p.debug.Println("[QueryDataCMD]", dbPrintStr(v, value[i]))
+						}
 						p.debug.Printf("query faied, error:[%v]", err.Error())
 					}
 					return map[string]map[string]string{}, err
@@ -70,6 +83,9 @@ func (p *NyaMySQL) QueryDataCMD(sql string, value ...[]interface{}) (map[string]
 				stmt.Close()
 				if err != nil {
 					if p.debug != nil {
+						if p.loggerLevel == NYAMYSQL_LOG_LEVEL_ERROR {
+							p.debug.Println("[QueryDataCMD]", dbPrintStr(v, value[i]))
+						}
 						p.debug.Printf("query faied, error:[%v]", err.Error())
 					}
 					return map[string]map[string]string{}, err
@@ -95,6 +111,12 @@ func (p *NyaMySQL) QueryDataCMD(sql string, value ...[]interface{}) (map[string]
 //	    "1":{"id":2,"name":"2"}
 //	}
 func (p *NyaMySQL) QueryDataJOIN(recn string, join []string, where string, orderby string, limit string, value ...interface{}) (map[string]map[string]string, error) {
+	if p == nil {
+		p = NewC(parametersSave.Config, parametersSave.Debug, parametersSave.loggerLevel)
+		if p.Error() != nil {
+			return map[string]map[string]string{}, p.err
+		}
+	}
 	var dbq string = "select " + recn + " from "
 	for i := 0; i < len(join); i++ {
 		dbq += join[i]
@@ -128,6 +150,12 @@ func (p *NyaMySQL) QueryDataJOIN(recn string, join []string, where string, order
 //	    "1":{"id":2,"name":"2"}
 //	}
 func (p *NyaMySQL) QueryData(recn string, table string, where string, orderby string, limit string, value ...interface{}) (map[string]map[string]string, error) {
+	if p == nil {
+		p = NewC(parametersSave.Config, parametersSave.Debug, parametersSave.loggerLevel)
+		if p.Error() != nil {
+			return map[string]map[string]string{}, p.err
+		}
+	}
 	var dbq string = "select " + recn + " from `" + table + "`"
 	if where != "" {
 		dbq += " where " + where
@@ -144,10 +172,14 @@ func (p *NyaMySQL) QueryData(recn string, table string, where string, orderby st
 }
 
 func (p *NyaMySQL) QueryTable(dbq string, value ...interface{}) (map[string]map[string]string, error) {
-	if p.debug != nil {
-		p.debug.Println("[QueryData]", dbPrintStr(dbq, value))
-	} else {
-		log.Println("[QueryData]", dbPrintStr(dbq, value))
+	if p == nil {
+		p = NewC(parametersSave.Config, parametersSave.Debug, parametersSave.loggerLevel)
+		if p.Error() != nil {
+			return map[string]map[string]string{}, p.err
+		}
+	}
+	if p.loggerLevel == NYAMYSQL_LOG_LEVEL_DEBUG && p.debug != nil {
+		p.debug.Println("[QueryTable]", dbPrintStr(dbq, value))
 	}
 	var (
 		query *sql.Rows
@@ -158,6 +190,9 @@ func (p *NyaMySQL) QueryTable(dbq string, value ...interface{}) (map[string]map[
 		query, err = p.db.Query(dbq)
 		if err != nil {
 			if p.debug != nil {
+				if p.loggerLevel == NYAMYSQL_LOG_LEVEL_ERROR {
+					p.debug.Println("[QueryTable]", dbPrintStr(dbq, value))
+				}
 				p.debug.Printf("query faied, error:[%v]", err.Error())
 			}
 			return map[string]map[string]string{}, err
@@ -166,6 +201,9 @@ func (p *NyaMySQL) QueryTable(dbq string, value ...interface{}) (map[string]map[
 		stmt, err := p.db.Prepare(dbq)
 		if err != nil {
 			if p.debug != nil {
+				if p.loggerLevel == NYAMYSQL_LOG_LEVEL_ERROR {
+					p.debug.Println("[QueryTable]", dbPrintStr(dbq, value))
+				}
 				p.debug.Printf("query faied, error:[%v]", err.Error())
 			}
 			return map[string]map[string]string{}, err
@@ -175,6 +213,9 @@ func (p *NyaMySQL) QueryTable(dbq string, value ...interface{}) (map[string]map[
 		stmt.Close()
 		if err != nil {
 			if p.debug != nil {
+				if p.loggerLevel == NYAMYSQL_LOG_LEVEL_ERROR {
+					p.debug.Println("[QueryTable]", dbPrintStr(dbq, value))
+				}
 				p.debug.Printf("query faied, error:[%v]", err.Error())
 			}
 			return map[string]map[string]string{}, err
@@ -191,6 +232,12 @@ func (p *NyaMySQL) QueryTable(dbq string, value ...interface{}) (map[string]map[
 //	`values`	...interface{}	額外的新增值，會在values後面新增
 //	return int64 和 error 物件，返回受影响行数,最后插入的 ID
 func (p *NyaMySQL) AddRecord(table string, key []string, values ...interface{}) (int64, int64, error) {
+	if p == nil {
+		p = NewC(parametersSave.Config, parametersSave.Debug, parametersSave.loggerLevel)
+		if p.Error() != nil {
+			return 0, 0, p.err
+		}
+	}
 	return p.AddOrUpdateRecord(table, key, []string{}, values...)
 }
 
@@ -202,22 +249,28 @@ func (p *NyaMySQL) AddRecord(table string, key []string, values ...interface{}) 
 //	`values`	...interface{}	額外的新增值，會在values後面新增
 //	return int64 和 error 物件，返回受影响的行ID
 func (p *NyaMySQL) AddRecordLastInsertId(table string, key []string, values ...interface{}) (int64, error) {
-	result, err := p.addOrUpdateRecord(table, key, []string{}, values...)
-	if err != nil {
-		if p.debug != nil {
-			p.debug.Printf("data updated faied, error:[%v]", err.Error())
+	if p == nil {
+		p = NewC(parametersSave.Config, parametersSave.Debug, parametersSave.loggerLevel)
+		if p.Error() != nil {
+			return 0, p.err
 		}
+	}
+	result, debugStr, err := p.addOrUpdateRecord(table, key, []string{}, values...)
+	if err != nil {
 		return 0, err
 	}
 
 	lastInsertId, err := result.LastInsertId()
 	if err != nil {
 		if p.debug != nil {
+			if p.loggerLevel == NYAMYSQL_LOG_LEVEL_ERROR {
+				p.debug.Println(debugStr)
+			}
 			p.debug.Printf("updated faied, error:[%v]", err.Error())
 		}
 		return 0, err
 	}
-	if p.debug != nil {
+	if p.loggerLevel == NYAMYSQL_LOG_LEVEL_DEBUG && p.debug != nil {
 		p.debug.Printf("Successfully updated %d rows of data!\n", lastInsertId)
 	}
 	return lastInsertId, err
@@ -232,30 +285,39 @@ func (p *NyaMySQL) AddRecordLastInsertId(table string, key []string, values ...i
 //	`values`	...interface{}	額外的新增值，會在values後面新增
 //	return int64,int64 和 error 物件，返回受影响行数 ,最后插入的 ID
 func (p *NyaMySQL) AddOrUpdateRecord(table string, key []string, upkey []string, values ...interface{}) (int64, int64, error) {
-	result, err := p.addOrUpdateRecord(table, key, upkey, values...)
-	if err != nil {
-		if p.debug != nil {
-			p.debug.Printf("data updated faied, error:[%v]", err.Error())
+	if p == nil {
+		p = NewC(parametersSave.Config, parametersSave.Debug, parametersSave.loggerLevel)
+		if p.Error() != nil {
+			return 0, 0, p.err
 		}
+	}
+	result, debugStr, err := p.addOrUpdateRecord(table, key, upkey, values...)
+	if err != nil {
 		return 0, 0, err
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		if p.debug != nil {
+			if p.loggerLevel == NYAMYSQL_LOG_LEVEL_ERROR {
+				p.debug.Println(debugStr)
+			}
 			p.debug.Printf("updated faied, error:[%v]", err.Error())
 		}
 		return 0, 0, err
 	}
-	if p.debug != nil {
-		p.debug.Printf("Successfully updated %d rows of data!\n", rowsAffected)
-	}
 	lastInsertId, err := result.LastInsertId()
 	if err != nil {
 		if p.debug != nil {
+			if p.loggerLevel == NYAMYSQL_LOG_LEVEL_ERROR {
+				p.debug.Println(debugStr)
+			}
 			p.debug.Printf("updated faied, error:[%v]", err.Error())
 		}
 		return rowsAffected, 0, err
+	}
+	if p.loggerLevel == NYAMYSQL_LOG_LEVEL_DEBUG && p.debug != nil {
+		p.debug.Printf("Successfully updated %d rows of data!\n", rowsAffected)
 	}
 	return rowsAffected, lastInsertId, err
 }
@@ -268,10 +330,15 @@ func (p *NyaMySQL) AddOrUpdateRecord(table string, key []string, upkey []string,
 //	`upkey`		[]string	需要更新的字段
 //	`values`	...interface{}	額外的新增值，會在values後面新增
 //	return int64 和 error 物件，返回受影响行数
-func (p *NyaMySQL) addOrUpdateRecord(table string, key []string, upkey []string, values ...interface{}) (sql.Result, error) {
-
+func (p *NyaMySQL) addOrUpdateRecord(table string, key []string, upkey []string, values ...interface{}) (sql.Result, string, error) {
+	if p == nil {
+		p = NewC(parametersSave.Config, parametersSave.Debug, parametersSave.loggerLevel)
+		if p.Error() != nil {
+			return nil, "", p.err
+		}
+	}
 	if len(values)%len(key) != 0 {
-		return nil, fmt.Errorf("'values'内容数量与'key'不符")
+		return nil, "", fmt.Errorf("'values'内容数量与'key'不符")
 	}
 	var dbq string = "insert into `" + table + "` ("
 	keyStr := ""
@@ -311,15 +378,156 @@ func (p *NyaMySQL) addOrUpdateRecord(table string, key []string, upkey []string,
 		debugKey = "AddOrUpdateRecord"
 	}
 
-	if p.debug != nil {
-		p.debug.Printf("[%s]%s\n", debugKey, dbPrintStr(dbq, values))
-	} else {
-		log.Printf("[%s]%s\n", debugKey, dbPrintStr(dbq, values))
+	debugStr := fmt.Sprintf("[%s]%s", debugKey, dbPrintStr(dbq, values))
+
+	if p.loggerLevel == NYAMYSQL_LOG_LEVEL_DEBUG && p.debug != nil {
+		p.debug.Printf("%s\n", debugStr)
 	}
 
 	stmt, err := p.db.Prepare(dbq)
 	if err != nil {
 		if p.debug != nil {
+			if p.loggerLevel == NYAMYSQL_LOG_LEVEL_ERROR {
+				p.debug.Println(debugStr)
+			}
+			p.debug.Printf("query faied, error:[%v]", err.Error())
+		}
+		return nil, debugStr, err
+	}
+
+	result, err := stmt.Exec(values...)
+	stmt.Close()
+	if err != nil {
+		if p.debug != nil {
+			if p.loggerLevel == NYAMYSQL_LOG_LEVEL_ERROR {
+				p.debug.Println(debugStr)
+			}
+			p.debug.Printf("data updated faied, error:[%v]", err.Error())
+		}
+		return nil, debugStr, err
+	}
+	return result, debugStr, nil
+}
+
+// AOrUOneRowRecord: 向SQL資料庫中新增或更新,一行一行添加返回准确的添加行数与更新行数
+//
+//	所有關鍵字除*以外需要用``包裹
+//	`table`		string		從哪個表中查詢不需要``包裹
+//	`key`		[]string	需要新增的字段
+//	`upkey`		[]string	需要更新的字段
+//	`values`	...interface{}	額外的新增值，會在values後面新增
+//	return int64,int64 和 error 物件，返回受影响行数 ,最后插入的 ID
+func (p *NyaMySQL) AOrUOneRowRecord(table string, key []string, upkey []string, values ...interface{}) (int64, int64, []int64, error) {
+	var lastID []int64 = []int64{}
+	if p == nil {
+		p = NewC(parametersSave.Config, parametersSave.Debug, parametersSave.loggerLevel)
+		if p.Error() != nil {
+			return 0, 0, lastID, p.err
+		}
+	}
+
+	keyLen := len(key)
+	if len(values)%keyLen != 0 {
+		return 0, 0, lastID, fmt.Errorf("'values'内容数量与'key'不符")
+	}
+	var (
+		inserted int64 = 0
+		updated  int64 = 0
+	)
+	loopLen := len(values) / keyLen
+	for i := 0; i < loopLen; i++ {
+		val := []interface{}{}
+		for j := 0; j < keyLen; j++ {
+			val = append(val, values[i*keyLen+j])
+		}
+		result, err := p.aOrUOneRowRecord(table, key, upkey, val...)
+		if err != nil {
+			if p.loggerLevel == NYAMYSQL_LOG_LEVEL_DEBUG && p.debug != nil {
+				p.debug.Printf("data updated faied, error:[%v]", err.Error())
+			}
+			return 0, 0, lastID, err
+		}
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			if p.loggerLevel == NYAMYSQL_LOG_LEVEL_DEBUG && p.debug != nil {
+				p.debug.Printf("updated faied, error:[%v]", err.Error())
+			}
+			return 0, 0, lastID, err
+		}
+		lastInsertId, err := result.LastInsertId()
+		if err != nil {
+			if p.loggerLevel == NYAMYSQL_LOG_LEVEL_DEBUG && p.debug != nil {
+				p.debug.Printf("updated faied, error:[%v]", err.Error())
+			}
+			return 0, 0, lastID, err
+		}
+		switch rowsAffected {
+		case 1:
+			inserted += 1
+		case 2:
+			updated += 1
+		}
+		lastID = append(lastID, lastInsertId)
+	}
+	return inserted, updated, lastID, nil
+}
+
+// aOrUOneRowRecord: 向SQL資料庫中新增或更新
+//
+//	所有關鍵字除*以外需要用``包裹
+//	`table`		string		從哪個表中查詢不需要``包裹
+//	`key`		[]string	需要新增的字段
+//	`upkey`		[]string	需要更新的字段
+//	`values`	...interface{}	額外的新增值，會在values後面新增
+//	return int64 和 error 物件，返回受影响行数
+func (p *NyaMySQL) aOrUOneRowRecord(table string, key []string, upkey []string, values ...interface{}) (sql.Result, error) {
+	if p == nil {
+		p = NewC(parametersSave.Config, parametersSave.Debug, parametersSave.loggerLevel)
+		if p.Error() != nil {
+			return nil, p.err
+		}
+	}
+	if len(values) != len(key) {
+		return nil, fmt.Errorf("'values'内容数量与'key'不符")
+	}
+	var dbq string = "insert into `" + table + "` ("
+	keyStr := ""
+	valuesStr := ""
+	for _, v := range key {
+		if keyStr != "" {
+			keyStr += ","
+			valuesStr += ","
+		}
+		keyStr += "`" + v + "`"
+		valuesStr += "?"
+	}
+	dbq += keyStr + ")" + " VALUES (" + valuesStr + ")"
+
+	debugKey := "AddRecord"
+	if len(upkey) != 0 {
+		dbq += " AS new ON DUPLICATE KEY UPDATE "
+
+		temp := ""
+		for _, v := range upkey {
+			if temp != "" {
+				temp += ","
+			}
+			temp += " `" + v + "`=new.`" + v + "`"
+		}
+		dbq += temp + ";"
+		debugKey = "AOrUOneRowRecord"
+	}
+
+	if p.loggerLevel == NYAMYSQL_LOG_LEVEL_DEBUG && p.debug != nil {
+		p.debug.Printf("[%s]%s\n", debugKey, dbPrintStr(dbq, values))
+	}
+
+	stmt, err := p.db.Prepare(dbq)
+	if err != nil {
+		if p.debug != nil {
+			if p.loggerLevel == NYAMYSQL_LOG_LEVEL_ERROR {
+				p.debug.Printf("[%s]%s\n", debugKey, dbPrintStr(dbq, values))
+			}
 			p.debug.Printf("query faied, error:[%v]", err.Error())
 		}
 		return nil, err
@@ -329,6 +537,9 @@ func (p *NyaMySQL) addOrUpdateRecord(table string, key []string, upkey []string,
 	stmt.Close()
 	if err != nil {
 		if p.debug != nil {
+			if p.loggerLevel == NYAMYSQL_LOG_LEVEL_ERROR {
+				p.debug.Printf("[%s]%s\n", debugKey, dbPrintStr(dbq, values))
+			}
 			p.debug.Printf("data updated faied, error:[%v]", err.Error())
 		}
 		return nil, err
@@ -345,19 +556,26 @@ func (p *NyaMySQL) addOrUpdateRecord(table string, key []string, upkey []string,
 //	`values`	...interface{}	額外的修改值
 //	return int64 和 error，返回更新的行数
 func (p *NyaMySQL) UpdateRecord(table string, updata string, where string, values ...interface{}) (int64, error) {
+	if p == nil {
+		p = NewC(parametersSave.Config, parametersSave.Debug, parametersSave.loggerLevel)
+		if p.Error() != nil {
+			return 0, p.err
+		}
+	}
 	var dbq string = "update `" + table + "` set " + updata
 	if where != "" {
 		dbq += " where " + where
 	}
-	if p.debug != nil {
+	if p.loggerLevel == NYAMYSQL_LOG_LEVEL_DEBUG && p.debug != nil {
 		p.debug.Println("[UpdataRecord]", dbPrintStr(dbq, values))
-	} else {
-		log.Println("[UpdataRecord]", dbPrintStr(dbq, values))
 	}
 
 	stmt, err := p.db.Prepare(dbq)
 	if err != nil {
 		if p.debug != nil {
+			if p.loggerLevel == NYAMYSQL_LOG_LEVEL_ERROR {
+				p.debug.Println("[UpdataRecord]", dbPrintStr(dbq, values))
+			}
 			p.debug.Printf("query faied, error:[%v]", err.Error())
 		}
 		return 0, err
@@ -366,14 +584,15 @@ func (p *NyaMySQL) UpdateRecord(table string, updata string, where string, value
 	stmt.Close()
 	if err != nil {
 		if p.debug != nil {
-			p.debug.Printf("update faied, error:[%v]", err.Error())
-		} else {
+			if p.loggerLevel == NYAMYSQL_LOG_LEVEL_ERROR {
+				p.debug.Println("[UpdataRecord]", dbPrintStr(dbq, values))
+			}
 			log.Printf("update faied, error:[%v]", err.Error())
 		}
 		return 0, err
 	}
 	num, _ := result.RowsAffected()
-	if p.debug != nil {
+	if p.loggerLevel == NYAMYSQL_LOG_LEVEL_DEBUG && p.debug != nil {
 		p.debug.Printf("update success, affected rows:[%d]\n", num)
 	}
 	return num, nil
@@ -389,6 +608,12 @@ func (p *NyaMySQL) UpdateRecord(table string, updata string, where string, value
 //	return		int64		刪除的行数
 //	return		error		錯誤
 func (p *NyaMySQL) DeleteRecord(table string, key string, and string, values ...interface{}) (int64, error) {
+	if p == nil {
+		p = NewC(parametersSave.Config, parametersSave.Debug, parametersSave.loggerLevel)
+		if p.Error() != nil {
+			return 0, p.err
+		}
+	}
 	var dbq string = fmt.Sprintf("delete from `%s` where `%s`", table, key)
 	if len(values) <= 1 {
 		dbq += fmt.Sprintf("=? %s", and)
@@ -411,14 +636,15 @@ func (p *NyaMySQL) DeleteRecord(table string, key string, and string, values ...
 		dbq += fmt.Sprintf(" in (%s) %s", wherein, and)
 	}
 	//删除uid=2的数据
-	if p.debug != nil {
+	if p.loggerLevel == NYAMYSQL_LOG_LEVEL_DEBUG && p.debug != nil {
 		p.debug.Println("[DeleteRecord]", dbPrintStr(dbq, values))
-	} else {
-		log.Println("[DeleteRecord]", dbPrintStr(dbq, values))
 	}
 	stmt, err := p.db.Prepare(dbq)
 	if err != nil {
 		if p.debug != nil {
+			if p.loggerLevel == NYAMYSQL_LOG_LEVEL_ERROR {
+				p.debug.Println("[DeleteRecord]", dbPrintStr(dbq, values))
+			}
 			p.debug.Printf("query faied, error:[%v]", err.Error())
 		}
 		return 0, err
@@ -427,12 +653,15 @@ func (p *NyaMySQL) DeleteRecord(table string, key string, and string, values ...
 	stmt.Close()
 	if err != nil {
 		if p.debug != nil {
+			if p.loggerLevel == NYAMYSQL_LOG_LEVEL_ERROR {
+				p.debug.Println("[DeleteRecord]", dbPrintStr(dbq, values))
+			}
 			p.debug.Printf("delete faied, error:[%v]", err.Error())
 		}
 		return 0, err
 	}
 	num, _ := result.RowsAffected()
-	if p.debug != nil {
+	if p.loggerLevel == NYAMYSQL_LOG_LEVEL_DEBUG && p.debug != nil {
 		p.debug.Printf("delete success, affected rows:[%d]\n", num)
 	}
 	return num, nil
@@ -445,6 +674,12 @@ func (p *NyaMySQL) DeleteRecord(table string, key string, and string, values ...
 //	`keys`		[]string	根據哪個關鍵字刪除
 //	`values`	...interface{}	刪除條件的值
 func (p *NyaMySQL) DeleteRecordNoPK(table string, keys []string, values ...interface{}) error {
+	if p == nil {
+		p = NewC(parametersSave.Config, parametersSave.Debug, parametersSave.loggerLevel)
+		if p.Error() != nil {
+			return p.err
+		}
+	}
 	if len(values)%len(keys) != 0 {
 		return fmt.Errorf("'values'内容数量与'keys'不符")
 	}
@@ -465,15 +700,16 @@ func (p *NyaMySQL) DeleteRecordNoPK(table string, keys []string, values ...inter
 	dbq += where + ")"
 
 	//删除uid=2的数据
-	if p.debug != nil {
+	if p.loggerLevel == NYAMYSQL_LOG_LEVEL_DEBUG && p.debug != nil {
 		p.debug.Println("[DeleteRecordNoPK]", dbPrintStr(dbq, values))
-	} else {
-		log.Println("[DeleteRecordNoPK]", dbPrintStr(dbq, values))
 	}
 
 	stmt, err := p.db.Prepare(dbq)
 	if err != nil {
 		if p.debug != nil {
+			if p.loggerLevel == NYAMYSQL_LOG_LEVEL_ERROR {
+				p.debug.Println("[DeleteRecordNoPK]", dbPrintStr(dbq, values))
+			}
 			p.debug.Printf("query faied, error:[%v]", err.Error())
 		}
 		return err
@@ -482,12 +718,15 @@ func (p *NyaMySQL) DeleteRecordNoPK(table string, keys []string, values ...inter
 	stmt.Close()
 	if err != nil {
 		if p.debug != nil {
+			if p.loggerLevel == NYAMYSQL_LOG_LEVEL_ERROR {
+				p.debug.Println("[DeleteRecordNoPK]", dbPrintStr(dbq, values))
+			}
 			p.debug.Printf("delete faied, error:[%v]", err.Error())
 		}
 		return err
 	}
 	num, _ := result.RowsAffected()
-	if p.debug != nil {
+	if p.loggerLevel == NYAMYSQL_LOG_LEVEL_DEBUG && p.debug != nil {
 		p.debug.Printf("delete success, affected rows:[%d]\n", num)
 	}
 	return nil
@@ -505,14 +744,21 @@ func (p *NyaMySQL) DeleteRecordNoPK(table string, keys []string, values ...inter
 //	    "1":{"id":2,"name":"2"}
 //	}
 func (p *NyaMySQL) FreequeryData(sqlstr string, values ...interface{}) (map[string]map[string]string, error) {
-	if p.debug != nil {
+	if p == nil {
+		p = NewC(parametersSave.Config, parametersSave.Debug, parametersSave.loggerLevel)
+		if p.Error() != nil {
+			return map[string]map[string]string{}, p.err
+		}
+	}
+	if p.loggerLevel == NYAMYSQL_LOG_LEVEL_DEBUG && p.debug != nil {
 		p.debug.Println("[FreequeryData]", dbPrintStr(sqlstr, values))
-	} else {
-		log.Println("[FreequeryData]", dbPrintStr(sqlstr, values))
 	}
 	stmt, err := p.db.Prepare(sqlstr)
 	if err != nil {
 		if p.debug != nil {
+			if p.loggerLevel == NYAMYSQL_LOG_LEVEL_ERROR {
+				p.debug.Println("[FreequeryData]", dbPrintStr(sqlstr, values))
+			}
 			p.debug.Printf("query faied, error:[%v]", err.Error())
 		}
 		return map[string]map[string]string{}, err
@@ -521,6 +767,9 @@ func (p *NyaMySQL) FreequeryData(sqlstr string, values ...interface{}) (map[stri
 	stmt.Close()
 	if err != nil {
 		if p.debug != nil {
+			if p.loggerLevel == NYAMYSQL_LOG_LEVEL_ERROR {
+				p.debug.Println("[FreequeryData]", dbPrintStr(sqlstr, values))
+			}
 			p.debug.Printf("query faied, error:[%v]", err.Error())
 		}
 		return map[string]map[string]string{}, err
@@ -543,6 +792,9 @@ func (p *NyaMySQL) FreequeryData(sqlstr string, values ...interface{}) (map[stri
 	for query.Next() { //循环，让游标往下推
 		if err := query.Scan(scans...); err != nil { //query.Scan查询出来的不定长值放到scans[i] = &values[i],也就是每行都放在values里
 			if p.debug != nil {
+				if p.loggerLevel == NYAMYSQL_LOG_LEVEL_ERROR {
+					p.debug.Println("[FreequeryData]", dbPrintStr(sqlstr, values))
+				}
 				p.debug.Println(err)
 			}
 			return map[string]map[string]string{}, err

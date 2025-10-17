@@ -67,7 +67,7 @@ func (p *MySQLPool) MysqlIsRun(isShowPrint bool) (int, error) {
 	}
 
 	// 建立新的 MySQL 連線
-	nyaMS := NewC(p.mySQLConfig, nil)
+	nyaMS := NewC(p.mySQLConfig, parametersSave.Debug, parametersSave.loggerLevel)
 	if nyaMS.Error() != nil {
 		if isShowPrint {
 			println("MySQL DB Link error:", nyaMS.Error().Error())
