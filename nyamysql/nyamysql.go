@@ -228,34 +228,36 @@ func (p *NyaMySQL) QueryTable(dbq string, value ...interface{}) (map[string]map[
 //
 //	所有關鍵字除*以外需要用``包裹
 //	`table`		string		從哪個表中查詢不需要``包裹
+//	`ignore`	bool		是否忽略重复
 //	`key`		[]string	需要新增的字段
 //	`values`	...interface{}	額外的新增值，會在values後面新增
 //	return int64 和 error 物件，返回受影响行数,最后插入的 ID
-func (p *NyaMySQL) AddRecord(table string, key []string, values ...interface{}) (int64, int64, error) {
+func (p *NyaMySQL) AddRecord(table string, ignore bool, key []string, values ...interface{}) (int64, int64, error) {
 	if p == nil {
 		p = NewC(parametersSave.Config, parametersSave.Debug, parametersSave.loggerLevel)
 		if p.Error() != nil {
 			return 0, 0, p.err
 		}
 	}
-	return p.AddOrUpdateRecord(table, key, []string{}, values...)
+	return p.AddOrUpdateRecord(table, ignore, key, []string{}, values...)
 }
 
 // AddRecordLastInsertId: 向SQL資料庫中新增
 //
 //	所有關鍵字除*以外需要用``包裹
 //	`table`		string		從哪個表中查詢不需要``包裹
+//	`ignore`	bool		是否忽略重复
 //	`key`		[]string	需要新增的字段
 //	`values`	...interface{}	額外的新增值，會在values後面新增
 //	return int64 和 error 物件，返回受影响的行ID
-func (p *NyaMySQL) AddRecordLastInsertId(table string, key []string, values ...interface{}) (int64, error) {
+func (p *NyaMySQL) AddRecordLastInsertId(table string, ignore bool, key []string, values ...interface{}) (int64, error) {
 	if p == nil {
 		p = NewC(parametersSave.Config, parametersSave.Debug, parametersSave.loggerLevel)
 		if p.Error() != nil {
 			return 0, p.err
 		}
 	}
-	result, debugStr, err := p.addOrUpdateRecord(table, key, []string{}, values...)
+	result, debugStr, err := p.addOrUpdateRecord(table, ignore, key, []string{}, values...)
 	if err != nil {
 		return 0, err
 	}
@@ -280,18 +282,19 @@ func (p *NyaMySQL) AddRecordLastInsertId(table string, key []string, values ...i
 //
 //	所有關鍵字除*以外需要用``包裹
 //	`table`		string		從哪個表中查詢不需要``包裹
+//	`ignore`	bool		是否忽略重复
 //	`key`		[]string	需要新增的字段
 //	`upkey`		[]string	需要更新的字段
 //	`values`	...interface{}	額外的新增值，會在values後面新增
 //	return int64,int64 和 error 物件，返回受影响行数 ,最后插入的 ID
-func (p *NyaMySQL) AddOrUpdateRecord(table string, key []string, upkey []string, values ...interface{}) (int64, int64, error) {
+func (p *NyaMySQL) AddOrUpdateRecord(table string, ignore bool, key []string, upkey []string, values ...interface{}) (int64, int64, error) {
 	if p == nil {
 		p = NewC(parametersSave.Config, parametersSave.Debug, parametersSave.loggerLevel)
 		if p.Error() != nil {
 			return 0, 0, p.err
 		}
 	}
-	result, debugStr, err := p.addOrUpdateRecord(table, key, upkey, values...)
+	result, debugStr, err := p.addOrUpdateRecord(table, ignore, key, upkey, values...)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -326,11 +329,12 @@ func (p *NyaMySQL) AddOrUpdateRecord(table string, key []string, upkey []string,
 //
 //	所有關鍵字除*以外需要用``包裹
 //	`table`		string		從哪個表中查詢不需要``包裹
+//	`ignore`	bool		是否忽略重复
 //	`key`		[]string	需要新增的字段
 //	`upkey`		[]string	需要更新的字段
 //	`values`	...interface{}	額外的新增值，會在values後面新增
 //	return int64 和 error 物件，返回受影响行数
-func (p *NyaMySQL) addOrUpdateRecord(table string, key []string, upkey []string, values ...interface{}) (sql.Result, string, error) {
+func (p *NyaMySQL) addOrUpdateRecord(table string, ignore bool, key []string, upkey []string, values ...interface{}) (sql.Result, string, error) {
 	if p == nil {
 		p = NewC(parametersSave.Config, parametersSave.Debug, parametersSave.loggerLevel)
 		if p.Error() != nil {
@@ -340,7 +344,11 @@ func (p *NyaMySQL) addOrUpdateRecord(table string, key []string, upkey []string,
 	if len(values)%len(key) != 0 {
 		return nil, "", fmt.Errorf("'values'内容数量与'key'不符")
 	}
-	var dbq string = "insert into `" + table + "` ("
+	var dbq string = "insert"
+	if ignore && len(upkey) == 0 {
+		dbq += " IGNORE"
+	}
+	dbq += " into `" + table + "` ("
 	keyStr := ""
 	for _, v := range key {
 		if keyStr != "" {
