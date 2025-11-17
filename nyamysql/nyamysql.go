@@ -423,9 +423,10 @@ func (p *NyaMySQL) addOrUpdateRecord(table string, ignore bool, key []string, up
 //	`table`		string		從哪個表中查詢不需要``包裹
 //	`key`		[]string	需要新增的字段
 //	`upkey`		[]string	需要更新的字段
+//	`noupkey`	[]string	字段已有时不更新的key的字段
 //	`values`	...interface{}	額外的新增值，會在values後面新增
 //	return int64,int64 和 error 物件，返回受影响行数 ,最后插入的 ID
-func (p *NyaMySQL) AOrUOneRowRecord(table string, key []string, upkey []string, values ...interface{}) (int64, int64, []int64, error) {
+func (p *NyaMySQL) AOrUOneRowRecord(table string, key []string, upkey []string, noupkey []string, values ...interface{}) (int64, int64, []int64, error) {
 	var lastID []int64 = []int64{}
 	if p == nil {
 		p = NewC(parametersSave.Config, parametersSave.Debug, parametersSave.loggerLevel)
@@ -448,7 +449,7 @@ func (p *NyaMySQL) AOrUOneRowRecord(table string, key []string, upkey []string, 
 		for j := 0; j < keyLen; j++ {
 			val = append(val, values[i*keyLen+j])
 		}
-		result, err := p.aOrUOneRowRecord(table, key, upkey, val...)
+		result, err := p.aOrUOneRowRecord(table, key, upkey, noupkey, val...)
 		if err != nil {
 			if p.loggerLevel == NYAMYSQL_LOG_LEVEL_DEBUG && p.debug != nil {
 				p.debug.Printf("data updated faied, error:[%v]", err.Error())
@@ -486,9 +487,10 @@ func (p *NyaMySQL) AOrUOneRowRecord(table string, key []string, upkey []string, 
 //	`table`		string		從哪個表中查詢不需要``包裹
 //	`key`		[]string	需要新增的字段
 //	`upkey`		[]string	需要更新的字段
+//	`noupkey`	[]string	字段已有时不更新的key的字段
 //	`values`	...interface{}	額外的新增值，會在values後面新增
 //	return int64 和 error 物件，返回受影响行数
-func (p *NyaMySQL) aOrUOneRowRecord(table string, key []string, upkey []string, values ...interface{}) (sql.Result, error) {
+func (p *NyaMySQL) aOrUOneRowRecord(table string, key []string, upkey []string, noupkey []string, values ...interface{}) (sql.Result, error) {
 	if p == nil {
 		p = NewC(parametersSave.Config, parametersSave.Debug, parametersSave.loggerLevel)
 		if p.Error() != nil {
@@ -520,7 +522,18 @@ func (p *NyaMySQL) aOrUOneRowRecord(table string, key []string, upkey []string, 
 			if temp != "" {
 				temp += ","
 			}
-			temp += " `" + v + "`=new.`" + v + "`"
+			isNoupkey := false
+			for _, vv := range noupkey {
+				if v == vv {
+					isNoupkey = true
+					break
+				}
+			}
+			if isNoupkey {
+				temp += "`" + v + "`=`" + table + "`.`" + v + "`"
+			} else {
+				temp += " `" + v + "`=new.`" + v + "`"
+			}
 		}
 		dbq += temp + ";"
 		debugKey = "AOrUOneRowRecord"
