@@ -1,0 +1,3 @@
+[submodule "go-gen-l10n"]
+	path = go-gen-l10n
+	url = https://github.com/kagurazakayashi/go-gen-l10n.git
