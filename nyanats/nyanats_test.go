@@ -23,7 +23,8 @@ func TestNyaNATS_MultiScenario(t *testing.T) {
 	// 24 位金鑰：對應 AES-192
 	// 32 位金鑰：對應 AES-256
 	conf := NatsConfig{
-		NatsServer:        "127.0.0.1:4222",
+		NatsServerHost:    "127.0.0.1",
+		NatsServerPort:    4222,
 		NatsUser:          "admin",
 		NatsClient:        "GO Test Client",
 		NatsPassword:      "password123",

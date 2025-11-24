@@ -97,9 +97,10 @@ func NewC(config NatsConfig, debug *log.Logger) *NyaNATS {
 
 	// 5. 組合 NATS 連線 URL (支援帶有帳號密碼的格式)
 	scheme := "nats:/"
-	url := fmt.Sprintf("%s/%s", scheme, config.NatsServer)
+	addr := fmt.Sprintf("%s:%d", config.NatsServerHost, config.NatsServerPort)
+	url := fmt.Sprintf("%s/%s", scheme, addr)
 	if config.NatsUser != "" {
-		url = fmt.Sprintf("%s/%s:%s@%s", scheme, config.NatsUser, config.NatsPassword, config.NatsServer)
+		url = fmt.Sprintf("%s/%s:%s@%s", scheme, config.NatsUser, config.NatsPassword, addr)
 	}
 
 	// 6. 設定 NATS 連線選項 (如重連次數、超時時間與各種事件處理器)

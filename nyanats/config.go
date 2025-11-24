@@ -6,8 +6,11 @@ import "github.com/google/uuid"
 // NatsConfig 定義了連線至 NATS 伺服器所需的各項參數。
 // 支援透過 JSON 或 YAML 標籤進行序列化與反序列化。
 type NatsConfig struct {
-	// NatsServer 是 NATS 伺服器的位址（例如 "127.0.0.1:4222"）。
-	NatsServer string `json:"nats_server" yaml:"nats_server"`
+	// NatsServerHost 是 NATS 伺服器的主機名稱或 IP 位址（例如 "127.0.0.1"）。
+	NatsServerHost string `json:"nats_server_host" yaml:"nats_server_host"`
+
+	// NatsServerPort 是 NATS 伺服器的埠號（例如 4222）。
+	NatsServerPort int `json:"nats_server_port" yaml:"nats_server_port"`
 
 	// NatsUser 是用於連線驗證的使用者名稱。
 	NatsUser string `json:"nats_user" yaml:"nats_user"`
@@ -41,9 +44,14 @@ type NatsConfig struct {
 
 // setDefaults 檢查配置項，若欄位為空值或零值，則填充預設參數。
 func (c *NatsConfig) setDefaults() {
-	// 若未指定伺服器位址，預設連線至本地端 4222 埠口
-	if c.NatsServer == "" {
-		c.NatsServer = "127.0.0.1:4222"
+	// 若未指定伺服器主機，預設為本機位址
+	if c.NatsServerHost == "" {
+		c.NatsServerHost = "127.0.0.1"
+	}
+
+	// 若未指定伺服器埠號，預設為 4222
+	if c.NatsServerPort == 0 {
+		c.NatsServerPort = 4222
 	}
 
 	// 若未指定用戶端名稱，則自動生成一個隨機的 UUID 避免名稱衝突

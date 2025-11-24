@@ -19,7 +19,7 @@ type HttpAPIServerConfig struct {
 
 	// Port 為伺服器監聽的連接埠號。
 	// 實際部署時，應確認該連接埠未被其他服務占用，並與防火牆或反向代理設定一致。
-	Port int `json:"httpapiserver_post" yaml:"httpapiserver_post"`
+	Port int `json:"httpapiserver_port" yaml:"httpapiserver_port"`
 
 	// --- HTTPS 設定 ---
 
@@ -74,11 +74,11 @@ func DefaultConfig() *HttpAPIServerConfig {
 		Port:            8080,
 		ReadTimeout:     10,
 		WriteTimeout:    15,
-		IdleTimeout:     60,
+		IdleTimeout:     120,
 		EnableRateLimit: true,
-		LimitRequests:   50,  // 預設值：單一 IP 於單一時間視窗內最多允許 50 次請求。
+		LimitRequests:   30,  // 預設值：單一 IP 於單一時間視窗內最多允許 30 次請求。
 		LimitWindow:     1,   // 預設值：限流統計時間視窗為 1 秒。
-		BlockDuration:   600, // 預設值：觸發限流後，封鎖該 IP 10 分鐘。
+		BlockDuration:   300, // 預設值：觸發限流後，封鎖該 IP 5 分鐘。
 	}
 }
 
