@@ -19,27 +19,27 @@ type NatsConfig struct {
 	NatsPassword string `json:"nats_password" yaml:"nats_password"`
 
 	// NatsClient 是此用戶端在 NATS 伺服器上顯示的識別名稱。
-	NatsClient string `json:"client_name" yaml:"client_name"`
+	NatsClient string `json:"nats_client_name" yaml:"nats_client_name"`
 
 	// NatsMaxReconnects 定義了連線中斷後的最大嘗試重新連線次數。
-	NatsMaxReconnects int `json:"max_reconnects" yaml:"max_reconnects"`
+	NatsMaxReconnects int `json:"nats_max_reconnects" yaml:"nats_max_reconnects"`
 
 	// NatsReconnectWait 定義了每次嘗試重新連線之間的等待秒數。
-	NatsReconnectWait int `json:"reconnect_wait" yaml:"reconnect_wait"`
+	NatsReconnectWait int `json:"nats_reconnect_wait" yaml:"nats_reconnect_wait"`
 
 	// NatsConnectTimeout 定義了建立初始連線的逾時秒數。
-	NatsConnectTimeout int `json:"connect_timeout" yaml:"connect_timeout"`
+	NatsConnectTimeout int `json:"nats_connect_timeout" yaml:"nats_connect_timeout"`
 
 	// NatsEncryptionKey 是全域預設的對稱加密金鑰。
 	// - 注意：長度必須嚴格遵守 16, 24 或 32 字節 (Bytes)，分別對應 AES-128, AES-192, AES-256。
 	// - 產生一個隨機的 32 字元 Base64 字串（適用於 256-bit 加密）:
-	NatsEncryptionKey string `json:"encryption_key" yaml:"encryption_key"`
+	NatsEncryptionKey string `json:"nats_encryption_key" yaml:"nats_encryption_key"`
 
 	// NatsThemeKeys 可針對特定的主題（Subject）設定獨立的加密金鑰。
 	// - 優先權：若主題匹配，優先使用此處的金鑰；若無匹配，則回退至全域金鑰。
 	// - 明文傳輸：若值設為空字串 ""，則該主題將以「明文」傳輸，不進行任何加密。
 	// - 格式要求：同全域金鑰，長度必須為 16, 24 或 32 字節。
-	NatsThemeKeys map[string]string `json:"theme_keys" yaml:"theme_keys"`
+	NatsThemeKeys map[string]string `json:"nats_theme_keys" yaml:"nats_theme_keys"`
 }
 
 // setDefaults 檢查配置項，若欄位為空值或零值，則填充預設參數。
