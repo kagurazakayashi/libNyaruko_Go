@@ -15,9 +15,19 @@ import (
 
 // NyaNATS 是此套件的核心結構，封裝了 NATS 連線以及加解密所需的邏輯與金鑰。
 type NyaNATS struct {
-	err        error             // 存放最近一次發生的錯誤
-	natsConn   *nats.Conn        // NATS 的底層連線實例
-	debug      *log.Logger       // 用於輸出除錯資訊的日誌記錄器
+	err        error       // 存放最近一次發生的錯誤
+	natsConn   *nats.Conn  // NATS 的底層連線實例
+	debug      *log.Logger // 用於輸出除錯資訊的日誌記錄器
+	userLogger bool        // 標記 Logger 是否由外部傳入
+	/*
+		日誌返回開頭標識
+		- `L+` — Link up，NATS 連上 / 重連成功
+		- `L-` — Link down，NATS 斷開 / 關閉
+		- `<-` — 接收訊息（incoming）
+		- `->` — 傳送訊息（outgoing）
+		- `S+` — Subscribe，訂閱主題（成功或失敗）
+		- `S#` — Subscribe，初始化主題
+	*/
 	defaultKey []byte            // 預設使用的對稱加密金鑰 (AES)
 	themeKeys  map[string][]byte // 針對不同主題 (Subject) 獨立設定的金鑰對照表
 }
@@ -25,7 +35,11 @@ type NyaNATS struct {
 // logf 是一個內部的輔助方法，用於格式化並輸出 NyaNATS 的除錯日誌。
 func (p *NyaNATS) logf(format string, v ...interface{}) {
 	if p.debug != nil {
-		p.debug.Printf("[NyaNATS] "+format, v...)
+		if p.userLogger {
+			p.debug.Printf(format, v...)
+		} else {
+			p.debug.Printf("[NyaNATS] "+format, v...)
+		}
 	}
 }
 
@@ -41,7 +55,7 @@ func New(configString string, debug *log.Logger) *NyaNATS {
 		return NewC(natsConfig, debug)
 	}
 	// 若皆失敗則回傳帶有錯誤標記的物件
-	return &NyaNATS{err: fmt.Errorf("E: CONF"), debug: debug}
+	return &NyaNATS{err: fmt.Errorf("E: CONF"), debug: debug, userLogger: debug != nil}
 }
 
 // NewC 根據傳入的 NATSConfig 結構體實例來初始化 NyaNATS。
@@ -50,16 +64,20 @@ func NewC(config NatsConfig, debug *log.Logger) *NyaNATS {
 	config.setDefaults()
 
 	// 2. 如果未傳入 Logger，則檢查環境變數 DEBUG 是否包含 "NYANATS" 來決定是否啟用日誌
+	userLogger := debug != nil
 	if debug == nil {
 		debugEnv := os.Getenv("DEBUG")
 		if strings.Contains(strings.ToUpper(debugEnv), "NYANATS") {
 			debug = log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile)
 		}
+	} else {
+		debug.SetFlags(debug.Flags() &^ log.LstdFlags)
 	}
 
 	p := &NyaNATS{
-		debug:     debug,
-		themeKeys: make(map[string][]byte),
+		debug:      debug,
+		userLogger: userLogger,
+		themeKeys:  make(map[string][]byte),
 	}
 
 	// 3. 處理預設加密金鑰，檢查長度是否符合 AES 規範 (16, 24, 32 bytes)
