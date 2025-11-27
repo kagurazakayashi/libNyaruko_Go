@@ -26,10 +26,12 @@ type NyaNATS struct {
 		- `<-` — 接收訊息（incoming）
 		- `->` — 傳送訊息（outgoing）
 		- `S+` — Subscribe，訂閱主題（成功或失敗）
+		- `S-` — Unsubscribe，取消訂閱主題（成功或失敗）
 		- `S#` — Subscribe，初始化主題
 	*/
-	defaultKey []byte            // 預設使用的對稱加密金鑰 (AES)
-	themeKeys  map[string][]byte // 針對不同主題 (Subject) 獨立設定的金鑰對照表
+	defaultKey    []byte                   // 預設使用的對稱加密金鑰 (AES)
+	themeKeys     map[string][]byte        // 針對不同主題 (Subject) 獨立設定的金鑰對照表
+	subscriptions map[string]*nats.Subscription // 追蹤所有訂閱以便取消
 }
 
 // logf 是一個內部的輔助方法，用於格式化並輸出 NyaNATS 的除錯日誌。

@@ -1,6 +1,7 @@
 package nyanats
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/nats-io/nats.go"
@@ -15,12 +16,12 @@ func (p *NyaNATS) Subscribe(theme string, callback func(m string) string) error 
 	}
 
 	// 呼叫 NATS 底層訂閱
-	_, err := p.natsConn.Subscribe(theme, func(m *nats.Msg) {
+	sub, err := p.natsConn.Subscribe(theme, func(m *nats.Msg) {
 
 		// 根據訊息主題嘗試解密資料
 		data, err := p.decrypt(m.Subject, m.Data)
 		if err != nil {
-			p.logf("<- [%s](ERR) %v", m.Subject, err)
+			p.logf("<- [%s][ERROR] %v", m.Subject, err)
 			return
 		}
 		p.logf("<- [%s](%d) %s", theme, len(m.Data), data)
@@ -34,13 +35,13 @@ func (p *NyaNATS) Subscribe(theme string, callback func(m string) string) error 
 			// 加密回覆內容
 			encryptedReply, err := p.encrypt(m.Subject, []byte(replyContent))
 			if err != nil {
-				p.logf("-> [%s](ERR) %v", m.Reply, err)
+				p.logf("-> [%s][ERROR] %v", m.Reply, err)
 				return
 			}
 
 			// 將加密後的資料發送回 NATS
 			if err := m.Respond(encryptedReply); err != nil {
-				p.logf("-> [%s](ERR) %v", m.Reply, err)
+				p.logf("-> [%s][ERROR] %v", m.Reply, err)
 			} else {
 				p.logf("-> [%s](%d) %s", m.Reply, len(encryptedReply), replyContent)
 			}
@@ -49,8 +50,12 @@ func (p *NyaNATS) Subscribe(theme string, callback func(m string) string) error 
 
 	// 紀錄訂閱成功或失敗的日誌
 	if err != nil {
-		p.logf("S+ [%s](ERR) %v", theme, err)
+		p.logf("S+ [%s][ERROR] %v", theme, err)
 	} else {
+		if p.subscriptions == nil {
+			p.subscriptions = make(map[string]*nats.Subscription)
+		}
+		p.subscriptions[theme] = sub
 		p.logf("S+ [%s]", theme)
 	}
 	return err
@@ -72,11 +77,71 @@ func (p *NyaNATS) Publish(theme string, message string) error {
 	// 執行 NATS 發布操作
 	err = p.natsConn.Publish(theme, data)
 	if err != nil {
-		p.logf("-> [%s](ERR) %v", theme, err)
+		p.logf("-> [%s][ERROR] %v", theme, err)
 	} else {
 		p.logf("-> [%s](%d) %s", theme, len(data), message)
 	}
 	return err
+}
+
+// Unsubscribe 取消指定主題的訂閱。
+func (p *NyaNATS) Unsubscribe(theme string) error {
+	if p.subscriptions == nil {
+		p.logf("S- [%s][ERROR] %v", theme, "not found")
+		return fmt.Errorf("S- [%s][ERROR] not found", theme)
+	}
+	sub, ok := p.subscriptions[theme]
+	if !ok {
+		p.logf("S- [%s][ERROR] %v", theme, "not found")
+		return fmt.Errorf("S- [%s][ERROR] not found", theme)
+	}
+	err := sub.Unsubscribe()
+	if err != nil {
+		p.logf("S- [%s][ERROR] %v", theme, err)
+		return err
+	}
+	delete(p.subscriptions, theme)
+	p.logf("S- [%s]", theme)
+	return nil
+}
+
+// UnsubscribeAll 取消所有已訂閱的主題。
+func (p *NyaNATS) UnsubscribeAll() error {
+	if p.subscriptions == nil {
+		return nil
+	}
+	var lastErr error
+	for theme, sub := range p.subscriptions {
+		if err := sub.Unsubscribe(); err != nil {
+			p.logf("S- [%s][ERROR] %v", theme, err)
+			lastErr = err
+		} else {
+			p.logf("S- [%s]", theme)
+		}
+	}
+	p.subscriptions = make(map[string]*nats.Subscription)
+	return lastErr
+}
+
+// ListSubscriptions 傳回目前所有已訂閱的主題名稱清單。
+func (p *NyaNATS) ListSubscriptions() []string {
+	if p.subscriptions == nil {
+		return nil
+	}
+	themes := make([]string, 0, len(p.subscriptions))
+	for theme := range p.subscriptions {
+		themes = append(themes, theme)
+	}
+	return themes
+}
+
+// HasSubscription 檢查指定主題是否已訂閱。
+func (p *NyaNATS) HasSubscription(theme string) bool {
+	if p.subscriptions == nil {
+		return false
+	}
+	_, ok := p.subscriptions[theme]
+	return ok
 }
 
 // Request 發送請求訊息並等待對方的回覆，支援設定逾時時間。
@@ -98,14 +163,14 @@ func (p *NyaNATS) Request(theme string, message string, timeout time.Duration) (
 	// 發送請求並等待回傳
 	msg, err := p.natsConn.Request(theme, data, timeout)
 	if err != nil {
-		p.logf("<- [%s](ERR) %v", theme, err)
+		p.logf("<- [%s][ERROR] %v", theme, err)
 		return "", err
 	}
 
 	// 解密回傳的訊息內容
 	decryptedData, err := p.decrypt(theme, msg.Data)
 	if err != nil {
-		p.logf("<- [%s](ERR) %v", theme, err)
+		p.logf("<- [%s][ERROR] %v", theme, err)
 		return "", err
 	}
 
