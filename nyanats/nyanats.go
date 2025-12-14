@@ -138,7 +138,13 @@ func NewC(config NatsConfig, debug *log.Logger) *NyaNATS {
 		// 重連成功處理
 		nats.ReconnectHandler(func(nc *nats.Conn) { p.logf("L+ [%v]", nc.ConnectedUrl()) }),
 		// 非同步錯誤處理
-		nats.ErrorHandler(func(nc *nats.Conn, s *nats.Subscription, err error) { p.logf("<- [%s] ERR: %v", s.Subject, err) }),
+		nats.ErrorHandler(func(nc *nats.Conn, s *nats.Subscription, err error) {
+			if s != nil {
+				p.logf("<- [%s] ERR: %v", s.Subject, err)
+			} else {
+				p.logf("<- [] ERR: %v", err)
+			}
+		}),
 	}
 
 	// 7. 建立連線
