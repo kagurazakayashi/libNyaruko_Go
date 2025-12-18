@@ -30,6 +30,11 @@ const (
 	None    LogLevel = 6
 )
 
+// SetTimeZone 設定全域時區，影響所有 LogCC 系列函數的輸出時間戳。
+func SetTimeZone(loc *time.Location) {
+	timeZone = loc
+}
+
 // Log: 向終端輸出日誌
 //
 //	`setLevel` LogLevel 設定的日誌等級 (0-6)
