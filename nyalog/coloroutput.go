@@ -9,7 +9,6 @@ import (
 	"os"
 	"runtime"
 	"strings"
-	"syscall"
 
 	"github.com/gogf/gf/container/garray"
 )
@@ -17,9 +16,6 @@ import (
 // 宣告一個整數陣列 modeArr，包含六個元素，代表不同的模式
 var (
 	modeArr = []int{0, 1, 4, 5, 6, 7} // 模式陣列
-
-	// 宣告一個 LazyDLL 型態的變數 kernel32，並初始化為 nil，這是用來延遲載入 kernel32.dll
-	kernel32 *syscall.LazyDLL = nil
 )
 
 // 定義一個結構體 ColorOutput，用來表示輸出的顏色和模式
@@ -184,48 +180,6 @@ func (c ColorOutput) WithMode(mode int) ColorOutput {
 		c.mode = mode
 	}
 	return c
-}
-
-// Windows
-
-// 通过调用windows操作系统API设置终端文本属性，包括：前景色，背景色，高亮。可同时设置多个属性，使用竖线 | 隔开。
-// DOC: https://docs.microsoft.com/zh-cn/windows/console/setconsoletextattribute
-// Usage: https://docs.microsoft.com/zh-cn/windows/console/using-the-high-level-input-and-output-functions
-// 属性值: https://docs.microsoft.com/zh-cn/windows/console/console-screen-buffers#character-attributes
-// SetConsoleTextAttribute函数用于设置显示后续写入文本的颜色。在退出之前，程序会还原原始控制台输入模式和颜色属性。但是微软官方
-// 建议使用“虚拟终端”来实现终端控制，而且是跨平台的。
-// 建议使用基于windows提供的“虚拟终端序列”来实现兼容多平台的终端控制，比如：https://github.com/gookit/color
-// https://docs.microsoft.com/zh-cn/windows/console/console-virtual-terminal-sequences
-// https://docs.microsoft.com/zh-cn/windows/console/console-virtual-terminal-sequences#samples
-
-// CmdPrint 函式用來在 Windows 平台上設定主控台的文字顏色，並輸出訊息。
-// w 參數為 io.Writer 型態，代表輸出的目標，可以是標準輸出或標準錯誤輸出。
-// s 參數為 interface{} 型態，代表要輸出的訊息。
-// i 參數為 int 型態，代表要設定的顏色屬性（如文字顏色、背景顏色等）。
-func CmdPrint(w io.Writer, s interface{}, i int) {
-	// 檢查 kernel32 是否已經被初始化，如果還沒有就初始化它。
-	if kernel32 == nil {
-		kernel32 = syscall.NewLazyDLL("kernel32.dll") // 載入 kernel32.dll 動態連結庫
-	}
-
-	// 取得 SetConsoleTextAttribute 函式的位址，該函式用於設定主控台文字屬性。
-	proc := kernel32.NewProc("SetConsoleTextAttribute")
-
-	var handle uintptr
-	// 根據輸出目標是標準輸出還是標準錯誤輸出來設定文字顏色。
-	if w == os.Stdout {
-		handle, _, _ = proc.Call(uintptr(syscall.Stdout), uintptr(i))
-	} else {
-		handle, _, _ = proc.Call(uintptr(syscall.Stderr), uintptr(i))
-	}
-
-	// 輸出訊息到指定的 Writer（如標準輸出或標準錯誤輸出）。
-	fmt.Fprintf(w, "%v\n", s)
-
-	// 初始化 CloseHandle 函式，用於關閉打開的句柄（handle）。
-	CloseHandle := kernel32.NewProc("CloseHandle")
-	// 關閉先前開啟的句柄。
-	CloseHandle.Call(handle)
 }
 
 // ResetColor 函式用來重置主控台的文字顏色。
