@@ -8,7 +8,15 @@ import (
 	"strconv"
 	"strings"
 
-	_ "github.com/go-sql-driver/mysql"
+	"github.com/go-sql-driver/mysql"
+)
+
+var (
+	// MySQL 外键错误代码
+	ErrForeignCode = []uint16{
+		1451, // Cannot delete or update a parent row: a foreign key constraint fails
+		1452, // Cannot add or update a child row: a foreign key constraint fails
+	}
 )
 
 // QueryDataCMD: 從SQL資料庫中操作并查詢
@@ -39,7 +47,7 @@ func (p *NyaMySQL) QueryDataCMD(sql string, value ...[]interface{}) (map[string]
 				if err != nil {
 					if p.debug != nil {
 						if p.loggerLevel == NYAMYSQL_LOG_LEVEL_ERROR {
-							p.debug.Println("[QueryDataCMD]", dbPrintStr(v, value[i]))
+							p.debug.Println("[QueryDataCMD]", v)
 						}
 						p.debug.Printf("query faied, error:[%v]", err.Error())
 					}
@@ -410,7 +418,7 @@ func (p *NyaMySQL) addOrUpdateRecord(table string, ignore bool, key []string, up
 			if p.loggerLevel == NYAMYSQL_LOG_LEVEL_ERROR {
 				p.debug.Println(debugStr)
 			}
-			p.debug.Printf("data updated faied, error:[%v]", err.Error())
+			p.debug.Printf("[addOrUpdateRecord]data updated faied, error:[%v]", err.Error())
 		}
 		return nil, debugStr, err
 	}
@@ -424,9 +432,10 @@ func (p *NyaMySQL) addOrUpdateRecord(table string, ignore bool, key []string, up
 //	`key`		[]string	需要新增的字段
 //	`upkey`		[]string	需要更新的字段
 //	`noupkey`	[]string	字段已有时不更新的key的字段
+//	`retrykey`	[]string	字段外键约束导致错误时替换为nil的字段
 //	`values`	...interface{}	額外的新增值，會在values後面新增
 //	return int64,int64 和 error 物件，返回受影响行数 ,最后插入的 ID
-func (p *NyaMySQL) AOrUOneRowRecord(table string, key []string, upkey []string, noupkey []string, values ...interface{}) (int64, int64, []int64, error) {
+func (p *NyaMySQL) AOrUOneRowRecord(table string, key []string, upkey []string, noupkey []string, retrykey []string, values ...interface{}) (int64, int64, []int64, error) {
 	var lastID []int64 = []int64{}
 	if p == nil {
 		p = NewC(parametersSave.Config, parametersSave.Debug, parametersSave.loggerLevel)
@@ -451,10 +460,39 @@ func (p *NyaMySQL) AOrUOneRowRecord(table string, key []string, upkey []string, 
 		}
 		result, err := p.aOrUOneRowRecord(table, key, upkey, noupkey, val...)
 		if err != nil {
-			if p.loggerLevel == NYAMYSQL_LOG_LEVEL_DEBUG && p.debug != nil {
-				p.debug.Printf("data updated faied, error:[%v]", err.Error())
+			sqlErr, ok := err.(*mysql.MySQLError)
+			isForeignKey := false
+			if ok {
+				for _, foreignCode := range ErrForeignCode {
+					if foreignCode == sqlErr.Number {
+						isForeignKey = true
+					}
+				}
 			}
-			return 0, 0, lastID, err
+			if isForeignKey {
+				isNoupKeyForeignKey := false
+				for _, v := range retrykey {
+					k := fmt.Sprintf("`%s`", v)
+					if strings.Contains(err.Error(), k) {
+						for keyi, keyv := range key {
+							if keyv == v {
+								val[keyi] = nil
+								isNoupKeyForeignKey = true
+								break
+							}
+						}
+					}
+				}
+				if isNoupKeyForeignKey {
+					result, err = p.aOrUOneRowRecord(table, key, upkey, noupkey, val...)
+				}
+			}
+			if err != nil {
+				if p.loggerLevel == NYAMYSQL_LOG_LEVEL_DEBUG && p.debug != nil {
+					p.debug.Printf("[AOrUOneRowRecord]data updated faied, error:[%v]", err.Error())
+				}
+				return 0, 0, lastID, err
+			}
 		}
 		rowsAffected, err := result.RowsAffected()
 		if err != nil {
@@ -561,7 +599,7 @@ func (p *NyaMySQL) aOrUOneRowRecord(table string, key []string, upkey []string, 
 			if p.loggerLevel == NYAMYSQL_LOG_LEVEL_ERROR {
 				p.debug.Printf("[%s]%s\n", debugKey, dbPrintStr(dbq, values))
 			}
-			p.debug.Printf("data updated faied, error:[%v]", err.Error())
+			p.debug.Printf("[aOrUOneRowRecord]data updated faied, error:[%v]", err.Error())
 		}
 		return nil, err
 	}
