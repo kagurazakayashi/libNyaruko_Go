@@ -63,7 +63,27 @@ func NewC(natsConfig NATSConfig, debug *log.Logger) *NyaNATS {
 }
 
 func (p *NyaNATS) Subscribe(theme string, callback func(m string) string) error {
-	return p.err
+	if p.err != nil {
+		return p.err
+	}
+
+	_, err := p.natsConn.Subscribe(theme, func(m *nats.Msg) {
+		if p.debug != nil {
+			p.debug.Printf("Received message on [%s]", theme)
+		}
+
+		replyContent := callback(string(m.Data))
+
+		if m.Reply != "" {
+			if err := m.Respond([]byte(replyContent)); err != nil {
+				if p.debug != nil {
+					p.debug.Printf("Respond error: %v", err)
+				}
+			}
+		}
+	})
+
+	return err
 }
 
 func (p *NyaNATS) Publish(theme string, message string) error {
