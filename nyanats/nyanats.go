@@ -87,11 +87,22 @@ func (p *NyaNATS) Subscribe(theme string, callback func(m string) string) error 
 }
 
 func (p *NyaNATS) Publish(theme string, message string) error {
-	return p.err
+	if p.err != nil {
+		return p.err
+	}
+	return p.natsConn.Publish(theme, []byte(message))
 }
 
 func (p *NyaNATS) Request(theme string, message string, timeout time.Duration) (string, error) {
-	return "", p.err
+	if p.err != nil {
+		return "", p.err
+	}
+
+	msg, err := p.natsConn.Request(theme, []byte(message), timeout)
+	if err != nil {
+		return "", err
+	}
+	return string(msg.Data), nil
 }
 
 func (p *NyaNATS) Close() {
