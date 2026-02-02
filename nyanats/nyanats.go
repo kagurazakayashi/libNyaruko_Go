@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/google/uuid" // 需要运行 go get github.com/google/uuid
+	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
 	"gopkg.in/yaml.v3"
 )
@@ -21,17 +21,13 @@ type NATSConfig struct {
 	ConnectTimeout int    `json:"connect_timeout" yaml:"connect_timeout"`
 }
 
-// setDefaults 填充默认值
 func (c *NATSConfig) setDefaults() {
 	if c.NatsServer == "" {
 		c.NatsServer = "127.0.0.1:4222"
 	}
-
-	// 如果未指定名称，生成一个类似 "NyaNATS-550e8400-e29b..." 的唯一标识
 	if c.ClientName == "" {
 		c.ClientName = fmt.Sprintf("NyaNATS-%s", uuid.NewString())
 	}
-
 	if c.MaxReconnects == 0 {
 		c.MaxReconnects = 5
 	}
@@ -49,29 +45,41 @@ type NyaNATS struct {
 	debug    *log.Logger
 }
 
+func (p *NyaNATS) logf(format string, v ...interface{}) {
+	if p.debug != nil {
+		p.debug.Printf("[NyaNATS] "+format, v...)
+	}
+}
+
 func New(configString string, debug *log.Logger) *NyaNATS {
 	var natsConfig NATSConfig
 
+	tmp := &NyaNATS{debug: debug}
+
 	if err := json.Unmarshal([]byte(configString), &natsConfig); err == nil {
+		tmp.logf("检测到 JSON 配置格式")
+		return NewC(natsConfig, debug)
+	}
+	if err := yaml.Unmarshal([]byte(configString), &natsConfig); err == nil {
+		tmp.logf("检测到 YAML 配置格式")
 		return NewC(natsConfig, debug)
 	}
 
-	if err := yaml.Unmarshal([]byte(configString), &natsConfig); err == nil {
-		return NewC(natsConfig, debug)
-	}
-	return &NyaNATS{err: fmt.Errorf("failed to parse config"), debug: debug}
+	tmp.logf("配置解析失败: 既不是合法的 JSON 也不是 YAML")
+	return &NyaNATS{err: fmt.Errorf("config parse error"), debug: debug}
 }
 
 func NewC(config NATSConfig, debug *log.Logger) *NyaNATS {
 	config.setDefaults()
+	p := &NyaNATS{debug: debug}
 
 	var url string
 	if config.NatsUser != "" {
-
 		url = fmt.Sprintf("nats://%s:%s@%s", config.NatsUser, config.NatsPassword, config.NatsServer)
+		p.logf("正在尝试连接 (用户认证模式): %s", config.NatsServer)
 	} else {
-
 		url = fmt.Sprintf("nats://%s", config.NatsServer)
+		p.logf("正在尝试连接 (匿名模式): %s", config.NatsServer)
 	}
 
 	opts := []nats.Option{
@@ -81,27 +89,26 @@ func NewC(config NATSConfig, debug *log.Logger) *NyaNATS {
 		nats.Timeout(time.Duration(config.ConnectTimeout) * time.Second),
 
 		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
-			if debug != nil {
-				debug.Printf("NyaNATS: 链接断开 - %v", err)
-			}
+			p.logf("警告: 链接断开 - %v", err)
 		}),
 		nats.ReconnectHandler(func(nc *nats.Conn) {
-			if debug != nil {
-				debug.Printf("NyaNATS: 已重新连接至 %v", nc.ConnectedUrl())
-			}
+			p.logf("成功: 已重新连接至 %v", nc.ConnectedUrl())
+		}),
+		nats.ErrorHandler(func(nc *nats.Conn, s *nats.Subscription, err error) {
+			p.logf("异步错误: 主题 [%s] 发生异常 - %v", s.Subject, err)
 		}),
 	}
 
 	nc, err := nats.Connect(url, opts...)
 	if err != nil {
-		return &NyaNATS{err: err, debug: debug}
+		p.logf("错误: 无法建立初始连接 - %v", err)
+		p.err = err
+		return p
 	}
 
-	return &NyaNATS{
-		err:      nil,
-		natsConn: nc,
-		debug:    debug,
-	}
+	p.natsConn = nc
+	p.logf("连接成功! 客户端 ID: %s", config.ClientName)
+	return p
 }
 
 func (p *NyaNATS) Subscribe(theme string, callback func(m string) string) error {
@@ -110,21 +117,23 @@ func (p *NyaNATS) Subscribe(theme string, callback func(m string) string) error 
 	}
 
 	_, err := p.natsConn.Subscribe(theme, func(m *nats.Msg) {
-		if p.debug != nil {
-			p.debug.Printf("Received message on [%s]", theme)
-		}
+		p.logf("收到消息 <- 主题 [%s], 长度: %d 字节", theme, len(m.Data))
 
 		replyContent := callback(string(m.Data))
 
 		if m.Reply != "" {
+			p.logf("回复响应 -> 回传地址 [%s], 长度: %d 字节", m.Reply, len(replyContent))
 			if err := m.Respond([]byte(replyContent)); err != nil {
-				if p.debug != nil {
-					p.debug.Printf("Respond error: %v", err)
-				}
+				p.logf("回复失败: %v", err)
 			}
 		}
 	})
 
+	if err != nil {
+		p.logf("订阅失败: 主题 [%s] - %v", theme, err)
+	} else {
+		p.logf("已成功订阅主题: [%s]", theme)
+	}
 	return err
 }
 
@@ -132,7 +141,14 @@ func (p *NyaNATS) Publish(theme string, message string) error {
 	if p.err != nil {
 		return p.err
 	}
-	return p.natsConn.Publish(theme, []byte(message))
+
+	err := p.natsConn.Publish(theme, []byte(message))
+	if err != nil {
+		p.logf("发布失败: 主题 [%s] - %v", theme, err)
+	} else {
+		p.logf("已发布消息 -> 主题 [%s]", theme)
+	}
+	return err
 }
 
 func (p *NyaNATS) Request(theme string, message string, timeout time.Duration) (string, error) {
@@ -140,16 +156,22 @@ func (p *NyaNATS) Request(theme string, message string, timeout time.Duration) (
 		return "", p.err
 	}
 
+	p.logf("发起请求 -> 主题 [%s], 等待超时: %v", theme, timeout)
 	msg, err := p.natsConn.Request(theme, []byte(message), timeout)
 	if err != nil {
+		p.logf("请求超时或失败: %v", err)
 		return "", err
 	}
+
+	p.logf("收到响应 <- 来自主题 [%s]", theme)
 	return string(msg.Data), nil
 }
 
 func (p *NyaNATS) Close() {
 	if p.natsConn != nil {
+		p.logf("正在关闭连接...")
 		p.natsConn.Close()
+		p.logf("连接已安全关闭")
 	}
 }
 
