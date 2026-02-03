@@ -1,8 +1,12 @@
 package nyanats
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"time"
 
@@ -19,6 +23,8 @@ type NATSConfig struct {
 	MaxReconnects  int    `json:"max_reconnects" yaml:"max_reconnects"`
 	ReconnectWait  int    `json:"reconnect_wait" yaml:"reconnect_wait"`
 	ConnectTimeout int    `json:"connect_timeout" yaml:"connect_timeout"`
+	// EncryptionKey: 16, 24, 或 32 位字符串分别对应 AES-128, 192, 256
+	EncryptionKey string `json:"encryption_key" yaml:"encryption_key"`
 }
 
 func (c *NATSConfig) setDefaults() {
@@ -26,7 +32,7 @@ func (c *NATSConfig) setDefaults() {
 		c.NatsServer = "127.0.0.1:4222"
 	}
 	if c.ClientName == "" {
-		c.ClientName = fmt.Sprintf("NyaNATS-%s", uuid.NewString())
+		c.ClientName = uuid.NewString()
 	}
 	if c.MaxReconnects == 0 {
 		c.MaxReconnects = 5
@@ -43,6 +49,7 @@ type NyaNATS struct {
 	err      error
 	natsConn *nats.Conn
 	debug    *log.Logger
+	key      []byte // 内部存储字节类型的密钥
 }
 
 func (p *NyaNATS) logf(format string, v ...interface{}) {
@@ -51,35 +58,88 @@ func (p *NyaNATS) logf(format string, v ...interface{}) {
 	}
 }
 
+// encrypt 使用 AES-GCM 加密数据
+func (p *NyaNATS) encrypt(plaintext []byte) ([]byte, error) {
+	if len(p.key) == 0 {
+		return plaintext, nil
+	}
+
+	block, err := aes.NewCipher(p.key)
+	if err != nil {
+		return nil, err
+	}
+
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		return nil, err
+	}
+
+	// 封口：将加密结果追加在 nonce 后面
+	return gcm.Seal(nonce, nonce, plaintext, nil), nil
+}
+
+// decrypt 使用 AES-GCM 解密数据
+func (p *NyaNATS) decrypt(ciphertext []byte) ([]byte, error) {
+	if len(p.key) == 0 {
+		return ciphertext, nil
+	}
+
+	block, err := aes.NewCipher(p.key)
+	if err != nil {
+		return nil, err
+	}
+
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+
+	nonceSize := gcm.NonceSize()
+	if len(ciphertext) < nonceSize {
+		return nil, fmt.Errorf("ciphertext too short")
+	}
+
+	nonce, actualCiphertext := ciphertext[:nonceSize], ciphertext[nonceSize:]
+	return gcm.Open(nil, nonce, actualCiphertext, nil)
+}
+
 func New(configString string, debug *log.Logger) *NyaNATS {
 	var natsConfig NATSConfig
-
-	tmp := &NyaNATS{debug: debug}
-
 	if err := json.Unmarshal([]byte(configString), &natsConfig); err == nil {
-		tmp.logf("检测到 JSON 配置格式")
 		return NewC(natsConfig, debug)
 	}
 	if err := yaml.Unmarshal([]byte(configString), &natsConfig); err == nil {
-		tmp.logf("检测到 YAML 配置格式")
 		return NewC(natsConfig, debug)
 	}
-
-	tmp.logf("配置解析失败: 既不是合法的 JSON 也不是 YAML")
-	return &NyaNATS{err: fmt.Errorf("config parse error"), debug: debug}
+	return &NyaNATS{err: fmt.Errorf("E: CONF"), debug: debug}
 }
 
 func NewC(config NATSConfig, debug *log.Logger) *NyaNATS {
 	config.setDefaults()
 	p := &NyaNATS{debug: debug}
 
+	if config.EncryptionKey != "" {
+		p.key = []byte(config.EncryptionKey)
+		// 校验 AES 密钥长度
+		if l := len(p.key); l != 16 && l != 24 && l != 32 {
+			p.err = fmt.Errorf("E: AES KEY LEN (%d), MUST BE 16, 24, OR 32", l)
+			return p
+		}
+		p.logf("MODE: ENCRYPTED")
+	}
+
 	var url string
 	if config.NatsUser != "" {
-		url = fmt.Sprintf("nats://%s:%s@%s", config.NatsUser, config.NatsPassword, config.NatsServer)
-		p.logf("正在尝试连接 (用户认证模式): %s", config.NatsServer)
+		url = fmt.Sprintf("nats:/%s:%s@%s", config.NatsUser, config.NatsPassword, config.NatsServer)
+		p.logf("CONN %s@%s", config.NatsUser, config.NatsServer)
 	} else {
-		url = fmt.Sprintf("nats://%s", config.NatsServer)
-		p.logf("正在尝试连接 (匿名模式): %s", config.NatsServer)
+		url = fmt.Sprintf("nats:/%s", config.NatsServer)
+		p.logf("CONN %s", config.NatsServer)
 	}
 
 	opts := []nats.Option{
@@ -87,27 +147,20 @@ func NewC(config NATSConfig, debug *log.Logger) *NyaNATS {
 		nats.MaxReconnects(config.MaxReconnects),
 		nats.ReconnectWait(time.Duration(config.ReconnectWait) * time.Second),
 		nats.Timeout(time.Duration(config.ConnectTimeout) * time.Second),
-
-		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
-			p.logf("警告: 链接断开 - %v", err)
-		}),
-		nats.ReconnectHandler(func(nc *nats.Conn) {
-			p.logf("成功: 已重新连接至 %v", nc.ConnectedUrl())
-		}),
-		nats.ErrorHandler(func(nc *nats.Conn, s *nats.Subscription, err error) {
-			p.logf("异步错误: 主题 [%s] 发生异常 - %v", s.Subject, err)
-		}),
+		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) { p.logf("UNLINK %v", err) }),
+		nats.ReconnectHandler(func(nc *nats.Conn) { p.logf("LINK %v", nc.ConnectedUrl()) }),
+		nats.ErrorHandler(func(nc *nats.Conn, s *nats.Subscription, err error) { p.logf("E LINK: %s : %v", s.Subject, err) }),
 	}
 
 	nc, err := nats.Connect(url, opts...)
 	if err != nil {
-		p.logf("错误: 无法建立初始连接 - %v", err)
+		p.logf("E CON: %v", err)
 		p.err = err
 		return p
 	}
 
 	p.natsConn = nc
-	p.logf("连接成功! 客户端 ID: %s", config.ClientName)
+	p.logf("LINKID: %s", config.ClientName)
 	return p
 }
 
@@ -117,22 +170,36 @@ func (p *NyaNATS) Subscribe(theme string, callback func(m string) string) error 
 	}
 
 	_, err := p.natsConn.Subscribe(theme, func(m *nats.Msg) {
-		p.logf("收到消息 <- 主题 [%s], 长度: %d 字节", theme, len(m.Data))
+		p.logf("<- %s , LEN: %d", theme, len(m.Data))
 
-		replyContent := callback(string(m.Data))
+		// 解密输入
+		data, err := p.decrypt(m.Data)
+		if err != nil {
+			p.logf("E DECRYPT: %v", err)
+			return
+		}
+
+		replyContent := callback(string(data))
 
 		if m.Reply != "" {
-			p.logf("回复响应 -> 回传地址 [%s], 长度: %d 字节", m.Reply, len(replyContent))
-			if err := m.Respond([]byte(replyContent)); err != nil {
-				p.logf("回复失败: %v", err)
+			// 加密响应
+			encryptedReply, err := p.encrypt([]byte(replyContent))
+			if err != nil {
+				p.logf("E ENC-RESP: %v", err)
+				return
+			}
+
+			p.logf("-> %s , LEN: %d", m.Reply, len(encryptedReply))
+			if err := m.Respond(encryptedReply); err != nil {
+				p.logf("E SND: %s : %v", m.Reply, err)
 			}
 		}
 	})
 
 	if err != nil {
-		p.logf("订阅失败: 主题 [%s] - %v", theme, err)
+		p.logf("E SUB : %s : %v", theme, err)
 	} else {
-		p.logf("已成功订阅主题: [%s]", theme)
+		p.logf("SUB: %s", theme)
 	}
 	return err
 }
@@ -142,11 +209,16 @@ func (p *NyaNATS) Publish(theme string, message string) error {
 		return p.err
 	}
 
-	err := p.natsConn.Publish(theme, []byte(message))
+	data, err := p.encrypt([]byte(message))
 	if err != nil {
-		p.logf("发布失败: 主题 [%s] - %v", theme, err)
+		return err
+	}
+
+	err = p.natsConn.Publish(theme, data)
+	if err != nil {
+		p.logf("E PUB: %s : %v", theme, err)
 	} else {
-		p.logf("已发布消息 -> 主题 [%s]", theme)
+		p.logf("-> %s (ENC:%v)", theme, len(p.key) > 0)
 	}
 	return err
 }
@@ -156,22 +228,33 @@ func (p *NyaNATS) Request(theme string, message string, timeout time.Duration) (
 		return "", p.err
 	}
 
-	p.logf("发起请求 -> 主题 [%s], 等待超时: %v", theme, timeout)
-	msg, err := p.natsConn.Request(theme, []byte(message), timeout)
+	data, err := p.encrypt([]byte(message))
 	if err != nil {
-		p.logf("请求超时或失败: %v", err)
 		return "", err
 	}
 
-	p.logf("收到响应 <- 来自主题 [%s]", theme)
-	return string(msg.Data), nil
+	p.logf("-> %s", theme)
+	msg, err := p.natsConn.Request(theme, data, timeout)
+	if err != nil {
+		p.logf("E REQ: %s : %v", theme, err)
+		return "", err
+	}
+
+	// 解密返回的消息
+	decryptedData, err := p.decrypt(msg.Data)
+	if err != nil {
+		p.logf("E DECRYPT-RES: %v", err)
+		return "", err
+	}
+
+	p.logf("<- %s", theme)
+	return string(decryptedData), nil
 }
 
 func (p *NyaNATS) Close() {
 	if p.natsConn != nil {
-		p.logf("正在关闭连接...")
+		p.logf("OFF")
 		p.natsConn.Close()
-		p.logf("连接已安全关闭")
 	}
 }
 
