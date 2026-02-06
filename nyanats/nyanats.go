@@ -16,17 +16,15 @@ import (
 )
 
 type NATSConfig struct {
-	NatsServer     string `json:"nats_server" yaml:"nats_server"`
-	NatsUser       string `json:"nats_user" yaml:"nats_user"`
-	NatsPassword   string `json:"nats_password" yaml:"nats_password"`
-	ClientName     string `json:"client_name" yaml:"client_name"`
-	MaxReconnects  int    `json:"max_reconnects" yaml:"max_reconnects"`
-	ReconnectWait  int    `json:"reconnect_wait" yaml:"reconnect_wait"`
-	ConnectTimeout int    `json:"connect_timeout" yaml:"connect_timeout"`
-
-	EncryptionKey string `json:"encryption_key" yaml:"encryption_key"`
-
-	ThemeKeys map[string]string `json:"theme_keys" yaml:"theme_keys"`
+	NatsServer     string            `json:"nats_server" yaml:"nats_server"`
+	NatsUser       string            `json:"nats_user" yaml:"nats_user"`
+	NatsPassword   string            `json:"nats_password" yaml:"nats_password"`
+	ClientName     string            `json:"client_name" yaml:"client_name"`
+	MaxReconnects  int               `json:"max_reconnects" yaml:"max_reconnects"`
+	ReconnectWait  int               `json:"reconnect_wait" yaml:"reconnect_wait"`
+	ConnectTimeout int               `json:"connect_timeout" yaml:"connect_timeout"`
+	EncryptionKey  string            `json:"encryption_key" yaml:"encryption_key"`
+	ThemeKeys      map[string]string `json:"theme_keys" yaml:"theme_keys"`
 }
 
 func (c *NATSConfig) setDefaults() {
@@ -107,8 +105,9 @@ func (p *NyaNATS) decrypt(theme string, ciphertext []byte) ([]byte, error) {
 	}
 
 	nonceSize := gcm.NonceSize()
-	if len(ciphertext) < nonceSize {
-		return nil, fmt.Errorf("E: CIPHER SHORT")
+	l := len(ciphertext)
+	if l < nonceSize {
+		return nil, fmt.Errorf("E: KEY %d < %d", l, nonceSize)
 	}
 
 	nonce, actualCiphertext := ciphertext[:nonceSize], ciphertext[nonceSize:]
@@ -135,25 +134,39 @@ func NewC(config NATSConfig, debug *log.Logger) *NyaNATS {
 
 	if config.EncryptionKey != "" {
 		p.defaultKey = []byte(config.EncryptionKey)
-		if l := len(p.defaultKey); l != 16 && l != 24 && l != 32 {
-			p.err = fmt.Errorf("E: DEFAULT KEY LEN %d", l)
+		l := len(p.defaultKey)
+		if l != 16 && l != 24 && l != 32 {
+			p.err = fmt.Errorf("KEYLENERR %d", l)
+			p.logf("S# [](%d) ERR: LEN", l)
 			return p
 		}
+		p.logf("S# [](%d)", l)
+	} else {
+		p.logf("S# [](0)")
 	}
 
 	for theme, kStr := range config.ThemeKeys {
+
+		if kStr == "" {
+			p.themeKeys[theme] = nil
+			p.logf("S# [%s](0)", theme)
+			continue
+		}
+
 		kByte := []byte(kStr)
-		if l := len(kByte); l != 16 && l != 24 && l != 32 {
-			p.err = fmt.Errorf("E: THEME [%s] KEY LEN %d", theme, l)
+		l := len(kByte)
+		if l != 16 && l != 24 && l != 32 {
+			p.err = fmt.Errorf("S# [%s](%d) ERR: KEYLEN", theme, l)
 			return p
 		}
 		p.themeKeys[theme] = kByte
-		p.logf("THEME KEY LOADED: %s", theme)
+		p.logf("S# [%s](%d)", theme, l)
 	}
 
-	url := fmt.Sprintf("nats://%s", config.NatsServer)
+	scheme := "nats:/"
+	url := fmt.Sprintf("%s/%s", scheme, config.NatsServer)
 	if config.NatsUser != "" {
-		url = fmt.Sprintf("nats://%s:%s@%s", config.NatsUser, config.NatsPassword, config.NatsServer)
+		url = fmt.Sprintf("%s/%s:%s@%s", scheme, config.NatsUser, config.NatsPassword, config.NatsServer)
 	}
 
 	opts := []nats.Option{
@@ -161,9 +174,13 @@ func NewC(config NATSConfig, debug *log.Logger) *NyaNATS {
 		nats.MaxReconnects(config.MaxReconnects),
 		nats.ReconnectWait(time.Duration(config.ReconnectWait) * time.Second),
 		nats.Timeout(time.Duration(config.ConnectTimeout) * time.Second),
-		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) { p.logf("UNLINK %v", err) }),
-		nats.ReconnectHandler(func(nc *nats.Conn) { p.logf("LINK %v", nc.ConnectedUrl()) }),
-		nats.ErrorHandler(func(nc *nats.Conn, s *nats.Subscription, err error) { p.logf("E LINK: %s : %v", s.Subject, err) }),
+		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
+			if err != nil {
+				p.logf("L- [%s] ERR: %v", p.natsConn.Opts.Name, err)
+			}
+		}),
+		nats.ReconnectHandler(func(nc *nats.Conn) { p.logf("L+ [%v]", nc.ConnectedUrl()) }),
+		nats.ErrorHandler(func(nc *nats.Conn, s *nats.Subscription, err error) { p.logf("L+ [%s] ERR: %v", s.Subject, err) }),
 	}
 
 	nc, err := nats.Connect(url, opts...)
@@ -173,7 +190,7 @@ func NewC(config NATSConfig, debug *log.Logger) *NyaNATS {
 	}
 
 	p.natsConn = nc
-	p.logf("LINKID: %s", config.ClientName)
+	p.logf("L+ [%s]", config.ClientName)
 	return p
 }
 
@@ -183,13 +200,13 @@ func (p *NyaNATS) Subscribe(theme string, callback func(m string) string) error 
 	}
 
 	_, err := p.natsConn.Subscribe(theme, func(m *nats.Msg) {
-		p.logf("<- %s , LEN: %d", theme, len(m.Data))
 
 		data, err := p.decrypt(m.Subject, m.Data)
 		if err != nil {
-			p.logf("E DECRYPT [%s]: %v", m.Subject, err)
+			p.logf("<- [%s](ERR) %v", m.Subject, err)
 			return
 		}
+		p.logf("<- [%s](%d) %s", theme, len(m.Data), data)
 
 		replyContent := callback(string(data))
 
@@ -197,19 +214,19 @@ func (p *NyaNATS) Subscribe(theme string, callback func(m string) string) error 
 
 			encryptedReply, err := p.encrypt(m.Subject, []byte(replyContent))
 			if err != nil {
-				p.logf("E ENC-RESP: %v", err)
+				p.logf("-> [%s](ERR) %v", m.Reply, err)
 				return
 			}
 			if err := m.Respond(encryptedReply); err != nil {
-				p.logf("E SND: %s : %v", m.Reply, err)
+				p.logf("-> [%s](ERR) %v", m.Reply, err)
 			}
 		}
 	})
 
 	if err != nil {
-		p.logf("E SUB : %s : %v", theme, err)
+		p.logf("S+ [%s](ERR) %v", theme, err)
 	} else {
-		p.logf("SUB: %s", theme)
+		p.logf("S+ [%s]", theme)
 	}
 	return err
 }
@@ -224,9 +241,9 @@ func (p *NyaNATS) Publish(theme string, message string) error {
 	}
 	err = p.natsConn.Publish(theme, data)
 	if err != nil {
-		p.logf("E PUB: %s : %v", theme, err)
+		p.logf("-> [%s](ERR) %v", theme, err)
 	} else {
-		p.logf("-> %s", theme)
+		p.logf("-> [%s](%d) %s", theme, len(data), message)
 	}
 	return err
 }
@@ -240,25 +257,25 @@ func (p *NyaNATS) Request(theme string, message string, timeout time.Duration) (
 		return "", err
 	}
 
-	p.logf("-> %s", theme)
+	p.logf("-> [%s](%d) %v", theme, len(data), message)
 	msg, err := p.natsConn.Request(theme, data, timeout)
 	if err != nil {
-		p.logf("E REQ: %s : %v", theme, err)
+		p.logf("-> [%s](ERR) %v", theme, err)
 		return "", err
 	}
 
 	decryptedData, err := p.decrypt(theme, msg.Data)
 	if err != nil {
-		p.logf("E DECRYPT-RES [%s]: %v", theme, err)
+		p.logf("<- [%s](ERR) %v", theme, err)
 		return "", err
 	}
-	p.logf("<- %s", theme)
+	p.logf("<- [%s](%d) %s", theme, len(msg.Data), decryptedData)
 	return string(decryptedData), nil
 }
 
 func (p *NyaNATS) Close() {
 	if p.natsConn != nil {
-		p.logf("OFF")
+		p.logf("L- [%s]", p.natsConn.Opts.Name)
 		p.natsConn.Close()
 	}
 }
