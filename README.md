@@ -38,6 +38,8 @@
   - 创建类实例: `nredis = nyaredis.New(confs)`
   - 可以使用 `nredis.任何代码中大写字母开头的函数` ，具体使用方式见 Wiki 或源码中每个函数的注释。
 
+注：使用 `nya*_test.go` 进行测试时，先配置环境变量 `GOWORK=off` 。
+
 ## 详细使用帮助
 
 参考 [Wiki](https://github.com/kagurazakayashi/libNyaruko_TS/wiki) ，在 Wiki 右侧的 Pages 点相关文件名即可了解。
