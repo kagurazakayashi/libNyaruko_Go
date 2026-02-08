@@ -2,70 +2,90 @@ package nyanats
 
 import (
 	"log"
+	"strings"
 	"testing"
 	"time"
 )
 
-func TestNyaNATS_FullConfig(t *testing.T) {
-	// 1. 这是一个覆盖了所有功能的完整配置示例
+func TestNyaNATS_MultiScenario(t *testing.T) {
+	// --- 1. 構造生產級配置 ---
 	conf := NATSConfig{
-		// 基础连接（对应你的 nats-server.conf）
-		NatsServer:   "127.0.0.1:4222",
-		NatsUser:     "admin",
-		NatsPassword: "password123",
-
-		// 运行控制
-		ClientName:     "Tester-Device-01", // 如果为空，工具类会自动生成 UUID
-		MaxReconnects:  10,                 // 允许重连 10 次
-		ReconnectWait:  1,                  // 重连间隔 1 秒
-		ConnectTimeout: 5,                  // 连接超时 5 秒
-
-		// 加密设置
-		// 全局默认密钥 (必须是 16, 24 或 32 字节)
-		EncryptionKey: "global-default-key-32-char-long!",
-
-		// 特定主题的差异化密钥映射
+		NatsServer:    "127.0.0.1:4222",
+		NatsUser:      "admin",
+		NatsPassword:  "password123",
+		EncryptionKey: "GLOBAL_BACKUP_KEY_32_CHARS_LONG!", // 全域性預設金鑰
 		ThemeKeys: map[string]string{
-			"order.private": "special-order-key-32-char-long!!", // 订单主题用独立密钥
-			"log.public":    "",                                 // 明确指定不加密
+			"theme.dedicated": "DEDICATED_SECRETKEY_32_CHAR_LONG", // 專用金鑰
+			"theme.plain":     "",                                 // 顯式指定：明文傳輸
 		},
 	}
 
-	// 2. 初始化客户端
-	// 使用 log.Default() 可以在测试时看到 [NyaNATS] 的打出来的 debug 日志
+	// 初始化客戶端
 	client := NewC(conf, log.Default())
 	if err := client.Error(); err != nil {
-		t.Fatalf("无法连接到 NATS Server: %v", err)
+		t.Fatalf("無法連線 NATS: %v", err)
 	}
 	defer client.Close()
 
-	// 3. 测试：特定主题加密通信 (order.private)
-	testTopic := "order.private"
-	testMsg := "Sensitive Order Content"
-	done := make(chan string, 1)
+	separator := strings.Repeat("=", 50)
 
-	err := client.Subscribe(testTopic, func(m string) string {
-		t.Logf("[Test] 收到并解密了消息: %s", m)
-		done <- m
-		return "ACK"
+	// --- 2. 場景 A：使用預設全域性金鑰 (主題：theme.default) ---
+	t.Run("GlobalKey_Scenario", func(t *testing.T) {
+		topic := "theme.default"
+		t.Logf("\n%s\n[場景A] 預設金鑰測試 | 主題: %s\n%s", separator, topic, separator)
+
+		// 訂閱端
+		client.Subscribe(topic, func(m string) string {
+			t.Logf("[訂閱收到] 解密後內容: %s", m)
+			return "訂閱端解密成功！"
+		})
+
+		// 模式1：Publish (傳送)
+		client.Publish(topic, "這是一條使用全域性金鑰加密的訊息")
+
+		// 模式2：Request (傳送並獲取回覆)
+		resp, _ := client.Request(topic, "詢問請求(全域性)", 1*time.Second)
+		t.Logf("[請求結果] 收到加密回覆並解密: %s", resp)
 	})
-	if err != nil {
-		t.Fatalf("订阅失败: %v", err)
-	}
 
-	// 发送消息
-	err = client.Publish(testTopic, testMsg)
-	if err != nil {
-		t.Errorf("发布失败: %v", err)
-	}
+	// --- 3. 場景 B：使用專用金鑰 (主題：theme.dedicated) ---
+	t.Run("DedicatedKey_Scenario", func(t *testing.T) {
+		topic := "theme.dedicated"
+		t.Logf("\n%s\n[場景B] 專用金鑰測試 | 主題: %s\n%s", separator, topic, separator)
 
-	// 等待回调触发
-	select {
-	case received := <-done:
-		if received != testMsg {
-			t.Errorf("数据不一致！期望 %s, 得到 %s", testMsg, received)
-		}
-	case <-time.After(3 * time.Second):
-		t.Error("测试超时：未收到订阅消息，请检查 NATS Server 是否运行以及密钥是否匹配")
-	}
+		// 訂閱端
+		client.Subscribe(topic, func(m string) string {
+			t.Logf("[訂閱收到] 解密後內容: %s", m)
+			return "訂閱端收到了專用金鑰加密的內容！"
+		})
+
+		// 模式1：Publish
+		client.Publish(topic, "這是一條使用專用金鑰加密的訊息")
+
+		// 模式2：Request
+		resp, _ := client.Request(topic, "專用金鑰請求", 1*time.Second)
+		t.Logf("[請求結果] 收到專用金鑰加密回覆: %s", resp)
+	})
+
+	// --- 4. 場景 C：明文傳輸 (主題：theme.plain) ---
+	t.Run("Plaintext_Scenario", func(t *testing.T) {
+		topic := "theme.plain"
+		t.Logf("\n%s\n[場景C] 明文傳輸測試 | 主題: %s\n%s", separator, topic, separator)
+
+		// 訂閱端
+		client.Subscribe(topic, func(m string) string {
+			t.Logf("[訂閱收到] 原始內容: %s", m)
+			return "訂閱端收到了明文內容！"
+		})
+
+		// 模式1：Publish
+		client.Publish(topic, "這是一條沒有加密的明文訊息")
+
+		// 模式2：Request
+		resp, _ := client.Request(topic, "明文詢問", 1*time.Second)
+		t.Logf("[請求結果] 收到明文回覆: %s", resp)
+	})
+
+	// 為了讓非同步的 Publish 日誌完整輸出
+	time.Sleep(500 * time.Millisecond)
 }
