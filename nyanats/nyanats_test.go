@@ -12,6 +12,7 @@ func TestNyaNATS_MultiScenario(t *testing.T) {
 	conf := NATSConfig{
 		NatsServer:    "127.0.0.1:4222",
 		NatsUser:      "admin",
+		ClientName:    "GO Test Client",
 		NatsPassword:  "password123",
 		EncryptionKey: "GLOBAL_BACKUP_KEY_32_CHARS_LONG!", // 全域性預設金鑰
 		ThemeKeys: map[string]string{

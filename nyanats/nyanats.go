@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -127,6 +129,13 @@ func New(configString string, debug *log.Logger) *NyaNATS {
 
 func NewC(config NATSConfig, debug *log.Logger) *NyaNATS {
 	config.setDefaults()
+	if debug == nil {
+		debugEnv := os.Getenv("DEBUG")
+		if strings.Contains(strings.ToUpper(debugEnv), "NYANATS") {
+			debug = log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile)
+		}
+	}
+
 	p := &NyaNATS{
 		debug:     debug,
 		themeKeys: make(map[string][]byte),
@@ -136,31 +145,32 @@ func NewC(config NATSConfig, debug *log.Logger) *NyaNATS {
 		p.defaultKey = []byte(config.EncryptionKey)
 		l := len(p.defaultKey)
 		if l != 16 && l != 24 && l != 32 {
-			p.err = fmt.Errorf("KEYLENERR %d", l)
-			p.logf("S# [](%d) ERR: LEN", l)
+			p.err = fmt.Errorf("S# [](K%d) ERR: KEYLEN", l)
+			fmt.Println(p.err.Error())
 			return p
 		}
-		p.logf("S# [](%d)", l)
+		p.logf("S# [](K%d)", l)
 	} else {
-		p.logf("S# [](0)")
+		p.logf("S# [](K0)")
 	}
 
 	for theme, kStr := range config.ThemeKeys {
 
 		if kStr == "" {
 			p.themeKeys[theme] = nil
-			p.logf("S# [%s](0)", theme)
+			p.logf("S# [%s](K0)", theme)
 			continue
 		}
 
 		kByte := []byte(kStr)
 		l := len(kByte)
 		if l != 16 && l != 24 && l != 32 {
-			p.err = fmt.Errorf("S# [%s](%d) ERR: KEYLEN", theme, l)
+			p.err = fmt.Errorf("S# [%s](K%d) ERR: KEYLEN", theme, l)
+			fmt.Println(p.err.Error())
 			return p
 		}
 		p.themeKeys[theme] = kByte
-		p.logf("S# [%s](%d)", theme, l)
+		p.logf("S# [%s](K%d)", theme, l)
 	}
 
 	scheme := "nats:/"
@@ -180,7 +190,7 @@ func NewC(config NATSConfig, debug *log.Logger) *NyaNATS {
 			}
 		}),
 		nats.ReconnectHandler(func(nc *nats.Conn) { p.logf("L+ [%v]", nc.ConnectedUrl()) }),
-		nats.ErrorHandler(func(nc *nats.Conn, s *nats.Subscription, err error) { p.logf("L+ [%s] ERR: %v", s.Subject, err) }),
+		nats.ErrorHandler(func(nc *nats.Conn, s *nats.Subscription, err error) { p.logf("<- [%s] ERR: %v", s.Subject, err) }),
 	}
 
 	nc, err := nats.Connect(url, opts...)
@@ -219,6 +229,8 @@ func (p *NyaNATS) Subscribe(theme string, callback func(m string) string) error 
 			}
 			if err := m.Respond(encryptedReply); err != nil {
 				p.logf("-> [%s](ERR) %v", m.Reply, err)
+			} else {
+				p.logf("-> [%s](%d) %s", m.Reply, len(encryptedReply), replyContent)
 			}
 		}
 	})
@@ -260,7 +272,7 @@ func (p *NyaNATS) Request(theme string, message string, timeout time.Duration) (
 	p.logf("-> [%s](%d) %v", theme, len(data), message)
 	msg, err := p.natsConn.Request(theme, data, timeout)
 	if err != nil {
-		p.logf("-> [%s](ERR) %v", theme, err)
+		p.logf("<- [%s](ERR) %v", theme, err)
 		return "", err
 	}
 
