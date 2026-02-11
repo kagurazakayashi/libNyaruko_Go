@@ -31,7 +31,7 @@ func (p *NyaNATS) logf(format string, v ...interface{}) {
 
 // New 是工廠函式，支援傳入 JSON 或 YAML 格式的配置字串來建立 NyaNATS 實例。
 func New(configString string, debug *log.Logger) *NyaNATS {
-	var natsConfig NATSConfig
+	var natsConfig NatsConfig
 	// 優先嘗試解析為 JSON
 	if err := json.Unmarshal([]byte(configString), &natsConfig); err == nil {
 		return NewC(natsConfig, debug)
@@ -45,7 +45,7 @@ func New(configString string, debug *log.Logger) *NyaNATS {
 }
 
 // NewC 根據傳入的 NATSConfig 結構體實例來初始化 NyaNATS。
-func NewC(config NATSConfig, debug *log.Logger) *NyaNATS {
+func NewC(config NatsConfig, debug *log.Logger) *NyaNATS {
 	// 1. 補齊配置的預設值
 	config.setDefaults()
 
@@ -63,8 +63,8 @@ func NewC(config NATSConfig, debug *log.Logger) *NyaNATS {
 	}
 
 	// 3. 處理預設加密金鑰，檢查長度是否符合 AES 規範 (16, 24, 32 bytes)
-	if config.EncryptionKey != "" {
-		p.defaultKey = []byte(config.EncryptionKey)
+	if config.NatsEncryptionKey != "" {
+		p.defaultKey = []byte(config.NatsEncryptionKey)
 		l := len(p.defaultKey)
 		if l != 16 && l != 24 && l != 32 {
 			p.err = fmt.Errorf("S# [](K%d) ERR: KEYLEN", l)
@@ -77,7 +77,7 @@ func NewC(config NATSConfig, debug *log.Logger) *NyaNATS {
 	}
 
 	// 4. 處理各主題 (Theme/Subject) 的專屬金鑰
-	for theme, kStr := range config.ThemeKeys {
+	for theme, kStr := range config.NatsThemeKeys {
 		if kStr == "" {
 			p.themeKeys[theme] = nil
 			p.logf("S# [%s](K0)", theme)
@@ -104,10 +104,10 @@ func NewC(config NATSConfig, debug *log.Logger) *NyaNATS {
 
 	// 6. 設定 NATS 連線選項 (如重連次數、超時時間與各種事件處理器)
 	opts := []nats.Option{
-		nats.Name(config.ClientName),
-		nats.MaxReconnects(config.MaxReconnects),
-		nats.ReconnectWait(time.Duration(config.ReconnectWait) * time.Second),
-		nats.Timeout(time.Duration(config.ConnectTimeout) * time.Second),
+		nats.Name(config.NatsClient),
+		nats.MaxReconnects(config.NatsMaxReconnects),
+		nats.ReconnectWait(time.Duration(config.NatsReconnectWait) * time.Second),
+		nats.Timeout(time.Duration(config.NatsConnectTimeout) * time.Second),
 		// 斷線處理
 		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
 			if err != nil {
@@ -128,7 +128,7 @@ func NewC(config NATSConfig, debug *log.Logger) *NyaNATS {
 	}
 
 	p.natsConn = nc
-	p.logf("L+ [%s]", config.ClientName)
+	p.logf("L+ [%s]", config.NatsClient)
 	return p
 }
 

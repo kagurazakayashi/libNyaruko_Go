@@ -22,13 +22,13 @@ func TestNyaNATS_MultiScenario(t *testing.T) {
 	// 16 位金鑰：對應 AES-128
 	// 24 位金鑰：對應 AES-192
 	// 32 位金鑰：對應 AES-256
-	conf := NATSConfig{
-		NatsServer:    "127.0.0.1:4222",
-		NatsUser:      "admin",
-		ClientName:    "GO Test Client",
-		NatsPassword:  "password123",
-		EncryptionKey: "GLOBAL_BACKUP_KEY_32_CHARS_LONG!", // 全域性預設金鑰
-		ThemeKeys: map[string]string{
+	conf := NatsConfig{
+		NatsServer:        "127.0.0.1:4222",
+		NatsUser:          "admin",
+		NatsClient:        "GO Test Client",
+		NatsPassword:      "password123",
+		NatsEncryptionKey: "GLOBAL_BACKUP_KEY_32_CHARS_LONG!", // 全域性預設金鑰
+		NatsThemeKeys: map[string]string{
 			"theme.dedicated": "DEDICATED_SECRETKEY_32_CHAR_LONG", // 專用金鑰
 			"theme.plain":     "",                                 // 顯式指定：明文傳輸
 		},
