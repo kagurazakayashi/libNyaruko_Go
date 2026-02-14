@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"time"
 )
 
 // Server 是 HTTP API 伺服器的主體
@@ -55,12 +56,19 @@ func (s *Server) Stop(ctx context.Context) error {
 
 // ServeHTTP 實現了 http.Handler 介面，是所有請求的入口
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// 統計活躍連線
+	recordConnIn()
+	defer recordConnOut()
+
+	// 統計總請求數
+	recordRequest()
 
 	// 獲取客戶端 IP (處理代理情況)
 	s.getClientIP(r)
 
 	// 解析並轉換請求資料
 	reqData := s.parseRequest(r)
+	recordTrafficRecv(len(reqData.Body)) // 統計接收流量
 
 	// 回撥外部程式邏輯
 	resp := s.handler(reqData)
@@ -78,7 +86,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// 寫入 Body 並統計傳送流量
 	if resp.Body != nil {
-		w.Write(resp.Body)
+		n, _ := w.Write(resp.Body)
+		recordTrafficSent(n)
 	}
 }
 
@@ -133,4 +142,15 @@ func (s *Server) getClientIP(r *http.Request) string {
 	}
 	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
 	return ip
+}
+
+// GetStats 外部呼叫的查詢狀態函式
+func GetStats() ServerStats {
+	return ServerStats{
+		TotalRequests:  globalStats.totalRequests,
+		CurrentConns:   globalStats.currentConns,
+		TotalBytesSent: globalStats.totalBytesSent,
+		TotalBytesRecv: globalStats.totalBytesRecv,
+		Uptime:         time.Since(globalStats.startTime).String(),
+	}
 }
