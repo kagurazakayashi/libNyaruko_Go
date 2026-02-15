@@ -19,6 +19,8 @@ type Server struct {
 
 // NewServer 建立一個新的伺服器例項
 func NewServer(conf *HttpAPIServerConfig, handler HandlerFunc) *Server {
+	// 初始化全侷限流器
+	globalLimiter = newRateLimiter(conf)
 
 	s := &Server{
 		config:  conf,
@@ -56,24 +58,30 @@ func (s *Server) Stop(ctx context.Context) error {
 
 // ServeHTTP 實現了 http.Handler 介面，是所有請求的入口
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// 統計活躍連線
+	// 1. 統計活躍連線
 	recordConnIn()
 	defer recordConnOut()
 
-	// 統計總請求數
+	// 2. 統計總請求數
 	recordRequest()
 
-	// 獲取客戶端 IP (處理代理情況)
-	s.getClientIP(r)
+	// 3. 獲取客戶端 IP (處理代理情況)
+	ip := s.getClientIP(r)
 
-	// 解析並轉換請求資料
+	// 4. 頻率限制檢查
+	if !globalLimiter.Allow(ip) {
+		http.Error(w, "Too Many Requests / IP Blocked", http.StatusTooManyRequests)
+		return
+	}
+
+	// 5. 解析並轉換請求資料
 	reqData := s.parseRequest(r)
 	recordTrafficRecv(len(reqData.Body)) // 統計接收流量
 
-	// 回撥外部程式邏輯
+	// 6. 回撥外部程式邏輯
 	resp := s.handler(reqData)
 
-	// 處理並寫回響應
+	// 7. 處理並寫回響應
 	if resp == nil {
 		resp = &HTTPResponse{StatusCode: 500}
 	}
@@ -151,6 +159,7 @@ func GetStats() ServerStats {
 		CurrentConns:   globalStats.currentConns,
 		TotalBytesSent: globalStats.totalBytesSent,
 		TotalBytesRecv: globalStats.totalBytesRecv,
+		BlockedIPs:     globalLimiter.GetBlockedIPs(),
 		Uptime:         time.Since(globalStats.startTime).String(),
 	}
 }
