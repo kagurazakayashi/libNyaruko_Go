@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"testing"
 	"time"
@@ -49,18 +50,30 @@ func TestRunServer(t *testing.T) {
 		// 列印請求的核心資訊，協助追蹤請求來源與路由行為。
 		fmt.Printf("\n[TestRunServer] [REQUEST] %s %s | From: %s\n", req.Method, req.Path, req.RemoteAddr)
 
-		// 當請求包含查詢參數時，輸出其內容以利除錯。
+		if len(req.Headers) > 0 {
+			fmt.Printf("[TestRunServer] [HEADERS] %v\n", req.Headers)
+		}
+
 		if len(req.Params) > 0 {
 			fmt.Printf("[TestRunServer] [PARAMS] %v\n", req.Params)
 		}
 
-		// 當請求包含 Cookie 時，輸出其內容以利驗證會話或狀態資訊。
 		if len(req.Cookies) > 0 {
 			fmt.Printf("[TestRunServer] [COOKIES] %v\n", req.Cookies)
 		}
 
 		// 根據請求路徑執行對應路由邏輯。
 		switch req.Path {
+		case "/ping":
+			var latency int64 = 0
+			if tStr, ok := req.Params["t"]; ok {
+				if clientTime, err := strconv.ParseInt(tStr, 10, 64); err == nil {
+					latency = time.Now().UnixMilli() - clientTime
+				}
+			}
+			return JSONResponse(200, map[string]int64{
+				"pong": latency,
+			})
 		case "/stats":
 			// 回傳目前伺服器統計資訊，供外部快速檢視執行狀態。
 			s := GetStats()
