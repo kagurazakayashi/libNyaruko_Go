@@ -5,18 +5,20 @@ import (
 	"net/http"
 )
 
-// BindJSON 是一個輔助方法，用於將 HTTP 請求的 Body (JSON 格式) 反序列化至指定的 Go 結構體中。
-// 參數 v 必須是一個指標 (pointer)。
+// BindJSON 會將 HTTP 請求本文中的 JSON 資料反序列化至 v 指向的目標結構中。
+// 呼叫端必須傳入可寫入的指標型別，否則 json.Unmarshal 將無法正確填入解析結果。
+// 當請求本文不是合法 JSON，或目標型別與 JSON 結構不相容時，會回傳對應錯誤。
 func (req *HTTPRequest) BindJSON(v interface{}) error {
 	return json.Unmarshal(req.Body, v)
 }
 
-// JSONResponse 是一個輔助函式，用於快速建立包含 JSON 資料的 HTTPResponse。
-// 它會自動將傳入的 data 序列化為 JSON，並設定對應的 Content-Type 標頭。
+// JSONResponse 會建立一個內容為 JSON 的 HTTPResponse，並自動設定 Content-Type 為 application/json。
+// data 會先被序列化為 JSON 後再寫入回應本文；若序列化失敗，則改為回傳 500 Internal Server Error。
+// 此函式適合用於快速建構標準 JSON API 回應內容。
 func JSONResponse(statusCode int, data interface{}) *HTTPResponse {
 	body, err := json.Marshal(data)
 	if err != nil {
-		// 若序列化失敗，退回 500 內部伺服器錯誤
+		// 當 JSON 序列化失敗時，回傳標準化的 500 錯誤回應，避免將無效內容寫入回應本文。
 		return &HTTPResponse{
 			StatusCode: http.StatusInternalServerError,
 			Body:       []byte(`{"error": "Internal Server Error: JSON marshal failed"}`),

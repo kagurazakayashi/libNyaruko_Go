@@ -20,6 +20,7 @@ type Server struct {
 	httpServer *http.Server
 	config     *HttpAPIServerConfig
 	handler    HandlerFunc
+	logger     LoggerFunc
 }
 
 // NewServer 建立並初始化一個 Server 實例。
@@ -35,22 +36,23 @@ type Server struct {
 //
 // 回傳：
 //   - 已完成初始化的 Server 實例。
-func NewServer(conf *HttpAPIServerConfig, handler HandlerFunc) *Server {
+func NewServer(conf *HttpAPIServerConfig, handler HandlerFunc, logger LoggerFunc) *Server {
 	// 初始化全域限流器，供所有請求共用。
 	globalLimiter = newRateLimiter(conf)
 
 	s := &Server{
 		config:  conf,
 		handler: handler,
+		logger:  logger,
 	}
 
 	// 初始化底層 http.Server，並將所有請求統一交由 Server.ServeHTTP 處理。
 	s.httpServer = &http.Server{
 		Addr:         fmt.Sprintf("%s:%d", conf.Host, conf.Port),
 		Handler:      s,
-		ReadTimeout:  conf.ReadTimeout,
-		WriteTimeout: conf.WriteTimeout,
-		IdleTimeout:  conf.IdleTimeout,
+		ReadTimeout:  Second(conf.ReadTimeout),
+		WriteTimeout: Second(conf.WriteTimeout),
+		IdleTimeout:  Second(conf.IdleTimeout),
 	}
 
 	return s
@@ -70,12 +72,12 @@ func NewServer(conf *HttpAPIServerConfig, handler HandlerFunc) *Server {
 //   - 底層 ListenAndServe 或 ListenAndServeTLS 所回傳的錯誤。
 func (s *Server) Start(serverName string, serverVersion string) error {
 	// 若有設定 Logger，先輸出 W3C 標頭與啟動資訊。
-	if s.config.Logger != nil {
+	if s.logger != nil {
 		lines := GetW3CHeader(serverName, serverVersion)
 		for _, line := range lines {
-			s.config.Logger(line)
+			s.logger(line)
 		}
-		s.config.Logger(fmt.Sprintf("#Listening: %s:%d", s.config.Host, s.config.Port))
+		s.logger(fmt.Sprintf("#Listening: %s:%d", s.config.Host, s.config.Port))
 	}
 
 	// 若已提供 TLS 憑證與私鑰，則以 HTTPS 模式啟動。
@@ -98,7 +100,9 @@ func (s *Server) Start(serverName string, serverVersion string) error {
 // 回傳：
 //   - Shutdown 執行結果所回傳的錯誤。
 func (s *Server) Stop(ctx context.Context) error {
-	s.config.Logger(fmt.Sprintf("#Stopping: %s", time.Now().UTC().Format("2006-01-02 15:04:05")))
+	if s.logger != nil {
+		s.logger(fmt.Sprintf("#Stopping: %s", time.Now().UTC().Format("2006-01-02 15:04:05")))
+	}
 	return s.httpServer.Shutdown(ctx)
 }
 
@@ -133,10 +137,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Too Many Requests / IP Blocked", statusCode)
 
 		// 即使請求遭拒，仍保留一筆完整 W3C 日誌，便於稽核與追蹤。
-		if s.config.Logger != nil {
+		if s.logger != nil {
 			logLine := FormatW3CLine(ip, r.Method, r.URL.Path, r.URL.RawQuery,
 				s.config.Port, r.UserAgent(), statusCode, time.Since(startTime))
-			s.config.Logger(logLine)
+			s.logger(logLine)
 		}
 		return
 	}
@@ -172,18 +176,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 請求完成後輸出 W3C 標準日誌。
-	if s.config.Logger != nil {
-		logLine := FormatW3CLine(
-			ip,
-			r.Method,
-			r.URL.Path,
-			r.URL.RawQuery,
-			s.config.Port,
-			r.UserAgent(),
-			resp.StatusCode,
-			time.Since(startTime),
-		)
-		s.config.Logger(logLine)
+	if s.logger != nil { // 改为 s.logger
+		logLine := FormatW3CLine(ip, r.Method, r.URL.Path, r.URL.RawQuery,
+			s.config.Port, r.UserAgent(), resp.StatusCode, time.Since(startTime))
+		s.logger(logLine)
 	}
 }
 

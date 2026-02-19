@@ -69,7 +69,7 @@ func (rl *RateLimiter) Allow(ip string) bool {
 	}
 
 	// 2. 若目前時間已超出限制視窗，重設計數器並重新開始統計。
-	if now.Sub(stat.windowStart) > rl.conf.LimitWindow {
+	if now.Sub(stat.windowStart) > Second(rl.conf.LimitWindow) {
 		stat.count = 1
 		stat.windowStart = now
 		return true
@@ -79,7 +79,7 @@ func (rl *RateLimiter) Allow(ip string) bool {
 	stat.count++
 	if stat.count > rl.conf.LimitRequests {
 		// 當請求數超過限制時，設定封鎖截止時間。
-		stat.blockedUntil = now.Add(rl.conf.BlockDuration)
+		stat.blockedUntil = now.Add(Second(rl.conf.BlockDuration))
 		return false
 	}
 
