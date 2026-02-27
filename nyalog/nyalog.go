@@ -15,7 +15,8 @@ import (
 )
 
 var (
-	timeZone *time.Location
+	timeZone   *time.Location
+	timeFormat string = "2006-01-02 15:04:05"
 )
 
 type LogLevel int8
@@ -33,6 +34,47 @@ const (
 // SetTimeZone 設定全域時區，影響所有 LogCC 系列函數的輸出時間戳。
 func SetTimeZone(loc *time.Location) {
 	timeZone = loc
+}
+
+// ConvertTimeFormat 將人類可讀的時間格式字串轉換為 Go 的參照時間格式。
+//
+// 支援以下代換，讓使用者可在設定檔中使用兩種格式：
+//
+//	YYYY → 2006  （四位年份）
+//	YY   → 06    （兩位年份）
+//	MM   → 01    （兩位月份）
+//	DD   → 02    （兩位日期）
+//	HH   → 15    （24 小時制）
+//	hh   → 03    （12 小時制）
+//	mm   → 04    （分鐘）
+//	ss   → 05    （秒）
+//	SSS  → 000   （毫秒）
+//
+// 若輸入已是 Go 參照時間格式或空字串，則原樣回傳。
+func ConvertTimeFormat(format string) string {
+	if format == "" {
+		return ""
+	}
+	s := format
+	s = strings.Replace(s, "YYYY", "2006", -1)
+	s = strings.Replace(s, "YY", "06", -1)
+	s = strings.Replace(s, "MM", "01", -1)
+	s = strings.Replace(s, "DD", "02", -1)
+	s = strings.Replace(s, "HH", "15", -1)
+	s = strings.Replace(s, "hh", "03", -1)
+	s = strings.Replace(s, "mm", "04", -1)
+	s = strings.Replace(s, "ss", "05", -1)
+	s = strings.Replace(s, "SSS", "000", -1)
+	return s
+}
+
+// SetTimeFormat 設定全域時間日期格式，影響所有 LogCC 系列函數的輸出時間戳格式。
+//
+// 預設值為 "2006-01-02 15:04:05"（YYYY-MM-DD HH:mm:ss）。
+// 設為空字串時，控制台輸出將不顯示時間日期。
+// 輸入格式會自動透過 ConvertTimeFormat 轉換，因此可同時支援人類可讀格式與 Go 參照時間格式。
+func SetTimeFormat(format string) {
+	timeFormat = ConvertTimeFormat(format)
 }
 
 // Log: 向終端輸出日誌
@@ -171,10 +213,11 @@ func logPrefix(level LogLevel) string {
 		}
 	}
 	var s [2]string = [2]string{"[", "]"}
-	var ExArr []string = []string{
-		s[0] + level.String() + s[1],
-		s[0] + timeStamp2timeString(0) + s[1],
-		// s[0] + logFuncInfo() + s[1],
+	var ExArr []string
+	ExArr = append(ExArr, s[0]+level.String()+s[1])
+	ts := timeStamp2timeString(0)
+	if ts != "" {
+		ExArr = append(ExArr, s[0]+ts+s[1])
 	}
 	return strings.Join(ExArr, "") + " "
 }
@@ -291,13 +334,16 @@ func GetTimeZone(zone string, fixedZone int) (timeZoneN *time.Location, err erro
 // timeStamp2timeString: 從時間戳獲取當前時間字串
 //
 //	`timestamp` int64  納秒時間戳，如果為 0 則提供當前時間字串
-//	return      string 時間字串，格式 `yyyy-MM-dd HH:mm:ss`
+//	return      string 時間字串，格式依 timeFormat 變數決定；若 timeFormat 為空字串則回傳空字串
 func timeStamp2timeString(timestamp int64) string {
+	if timeFormat == "" {
+		return ""
+	}
 	var timeObj time.Time = time.Now()
 	if timestamp > 0 {
 		timeObj = time.Unix(0, timestamp)
 	}
 	timeObj = timeObj.In(timeZone)
-	var timeStr string = timeObj.Format("2006-01-02 15:04:05")
+	var timeStr string = timeObj.Format(timeFormat)
 	return timeStr
 }
