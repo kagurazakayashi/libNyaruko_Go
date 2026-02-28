@@ -167,6 +167,21 @@ func LogCC(setLevel LogLevel, nowLevel LogLevel, color ConsoleColor, obj ...inte
 	Colorful.WithFrontColor(color.String()).Fprintln(os.Stderr, logStr)
 }
 
+// LogCCStream: 向指定輸出流輸出日誌，並指定輸出顏色
+//
+//	`setLevel` LogLevel 設定的日誌等級 (0-6)
+//	`nowLevel` LogLevel 當前輸出的日誌等級 (0-5)
+//	`color` ConsoleColor 文字顏色
+//	`stream` *os.File 輸出目標串流
+//	`obj` ...interface{} 要輸出的變數（會自動嘗試轉換成字串）
+func LogCCStream(setLevel LogLevel, nowLevel LogLevel, color ConsoleColor, stream *os.File, obj ...interface{}) {
+	if nowLevel < setLevel {
+		return
+	}
+	var logStr string = logString(nowLevel, obj)
+	Colorful.WithFrontColor(color.String()).Fprintln(stream, logStr)
+}
+
 // LogCCC: 向終端輸出日誌，並指定輸出前景顏色和背景顏色
 //
 //	`setLevel` LogLevel 設定的日誌等級 (0-6)
