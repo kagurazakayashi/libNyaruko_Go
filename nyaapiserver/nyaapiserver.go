@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -223,18 +224,22 @@ func (s *Server) parseRequest(r *http.Request) *HTTPRequest {
 		customReq.Params[k] = query.Get(k)
 	}
 
-	// 若為表單提交，則補充解析 POST 表單欄位並合併至 Params。
-	if strings.Contains(r.Header.Get("Content-Type"), "application/x-www-form-urlencoded") {
-		r.ParseForm()
-		for k := range r.PostForm {
-			customReq.Params[k] = r.PostForm.Get(k)
-		}
-	}
-
 	// 讀取完整 Body 內容供後續業務邏輯使用。
 	body, _ := io.ReadAll(r.Body)
 	customReq.Body = body
-	defer r.Body.Close()
+	r.Body.Close()
+
+	// 若為表單提交，則從已讀取的 body 中解析 POST 表單欄位並合併至 Params。
+	// 此處使用已讀取的 body byte slice 手動解析，避免 r.ParseForm() 先一步消費 r.Body 流，
+	// 導致 body 在後續流程中為空。
+	if strings.Contains(r.Header.Get("Content-Type"), "application/x-www-form-urlencoded") && len(body) > 0 {
+		formValues, err := url.ParseQuery(string(body))
+		if err == nil {
+			for k := range formValues {
+				customReq.Params[k] = formValues.Get(k)
+			}
+		}
+	}
 
 	return customReq
 }
